@@ -20,11 +20,17 @@ include_directories(
     ${CMAKE_SOURCE_DIR}
     ${gtest_SOURCE_DIR}/include
     ${gtest_SOURCE_DIR}
+    ${googletest_SOURCE_DIR}/googletest/include
 )
 
 # Add test executable
 add_executable(forword_test
     tests/test_forword.cpp
+)
+
+# Add benchmark executable
+add_executable(forword_bench
+    bench/bench_forword.cpp
 )
 
 # Link against GTest and pthread

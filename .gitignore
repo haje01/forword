@@ -1,5 +1,7 @@
 .python-version
 __pycache__/
 build/
+bench/bin/
+bench/obj/
 tests/bin/
 tests/obj/

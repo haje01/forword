@@ -126,7 +126,7 @@ print(f"Replaced text: {replaced_text}")
 - For frequent calls, it is recommended to initialize the Forword object once and reuse it.
 
 
-## Testing (For Forword Developers)
+## For Forword Developers
 
 ### Prerequisites
 Required tools for running tests in each language:
@@ -143,6 +143,38 @@ Required tools for running tests in each language:
 #### C#
 - .NET SDK
 - MSTest
+
+### Benchmarking
+Benchmark tools are provided to measure the performance of each language implementation.
+
+#### Python
+```bash
+python bench/bench_forword.py
+```
+
+#### C++
+```bash
+mkdir build && cd build
+cmake ..
+make
+./forword_bench
+```
+
+#### C#
+```bash
+cd bench
+dotnet run
+```
+
+The benchmark runs under the following conditions:
+- Same forbidden words file (bad, badword, 나쁜말, 욕설)
+- Same input text ("이것은 나쁜말 입니다. This is a bad word. 여기에 욕설이 있습니다.")
+- 10,000 iterations
+
+The benchmark results include:
+- Total number of operations
+- Total elapsed time (seconds)
+- Throughput (operations/sec)
 
 ### Running Tests
 
@@ -328,7 +360,7 @@ print(f"치환된 텍스트: {replaced_text}")
 - 빈번하게 호출하실 경우 Forword 객체를 처음 한 번만 초기화하고, 재사용하시는 것을 권장합니다.
 
 
-## 테스트하기 (Forword 개발자용)
+## Forword 개발자용
 
 ### Prerequisites
 각 언어별 테스트를 실행하기 위해 필요한 도구:
@@ -346,7 +378,39 @@ print(f"치환된 텍스트: {replaced_text}")
 - .NET SDK
 - MSTest
 
-### Running Tests
+### 벤치마킹
+각 언어별 구현의 성능을 측정하기 위한 벤치마크 도구가 제공됩니다.
+
+#### Python
+```bash
+python bench/bench_forword.py
+```
+
+#### C++
+```bash
+mkdir build && cd build
+cmake ..
+make
+./forword_bench
+```
+
+#### C#
+```bash
+cd bench
+dotnet run
+```
+
+The benchmark runs under the following conditions:
+- Same forbidden words file (bad, badword, 나쁜말, 욕설)
+- Same input text ("이것은 나쁜말 입니다. This is a bad word. 여기에 욕설이 있습니다.")
+- 10,000 iterations
+
+The benchmark results include:
+- Total number of operations
+- Total elapsed time (seconds)
+- Throughput (operations/sec)
+
+### 테스트 실행
 
 #### Python
 ```bash
@@ -393,13 +457,4 @@ dotnet test tests/test_forword.csproj
    - 파일 로딩 실패 처리
 
 ### Project Structure
-```
-forword/
-├── forword.h
-├── forword.cs
-├── forword.py
-└── tests/
-    ├── test_forword.cpp
-    ├── ForwordTests.cs
-    └── test_forword.py
 ```
