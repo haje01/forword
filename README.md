@@ -162,7 +162,7 @@ make
 
 #### C#
 ```bash
-dotnet test
+dotnet test tests/test_forword.csproj
 ```
 
 ### Test Cases
@@ -364,7 +364,7 @@ make
 
 #### C#
 ```bash
-dotnet test
+dotnet test tests/test_forword.csproj
 ```
 
 ### Test Cases
