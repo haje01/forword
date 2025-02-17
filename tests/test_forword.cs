@@ -101,4 +101,29 @@ public class TestForword
         Assert.IsFalse(forword.Search(""));
         Assert.AreEqual(forword.Replace(""), "");
     }
+
+    [TestMethod]
+    public void TestWordsWithWhitespace()
+    {
+        // Create forbidden words file with whitespace
+        File.WriteAllText(forbiddenWordsFile, "bad \n  badword\n\t나쁜말\n  욕설  \n", Encoding.UTF8);
+
+        var forword = new ForwordLib.Forword(forbiddenWordsFile);
+
+        // Test search
+        Assert.IsTrue(forword.Search("This is a bad word"));
+        Assert.IsTrue(forword.Search("This is a badword"));
+        Assert.IsTrue(forword.Search("이것은 나쁜말 입니다"));
+        Assert.IsTrue(forword.Search("이것은 욕설 입니다"));
+
+        // Test replace
+        Assert.AreEqual(
+            forword.Replace("This is a bad word"),
+            "This is a ***"
+        );
+        Assert.AreEqual(
+            forword.Replace("이것은 욕설 입니다"),
+            "이것은 *** 입니다"
+        );
+    }
 } 

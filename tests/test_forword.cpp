@@ -67,6 +67,25 @@ TEST_F(ForwordTest, EmptyInput) {
     EXPECT_EQ(forword->replace(""), "");
 }
 
+TEST_F(ForwordTest, WordsWithWhitespace) {
+    // Create forbidden words file with whitespace
+    std::ofstream file(forbidden_words_file);
+    file << "bad \n  badword\n\t나쁜말\n  욕설  \n";
+    file.close();
+
+    Forword forword(forbidden_words_file);
+
+    // Test search
+    EXPECT_TRUE(forword.search("This is a bad word"));
+    EXPECT_TRUE(forword.search("This is a badword"));
+    EXPECT_TRUE(forword.search("이것은 나쁜말 입니다"));
+    EXPECT_TRUE(forword.search("이것은 욕설 입니다"));
+
+    // Test replace
+    EXPECT_EQ(forword.replace("This is a bad word"), "This is a ***");
+    EXPECT_EQ(forword.replace("이것은 욕설 입니다"), "이것은 *** 입니다");
+}
+
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

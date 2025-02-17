@@ -74,5 +74,29 @@ class TestForword(unittest.TestCase):
         self.assertFalse(self.forword.search(""))
         self.assertEqual(self.forword.replace(""), "")
 
+    def test_words_with_whitespace(self):
+        """Test words with leading/trailing whitespace in forbidden words file"""
+        # Create temporary file with words containing whitespace
+        with open(self.forbidden_words_file, "w", encoding="utf-8") as f:
+            f.write("bad \n  badword\n\t나쁜말\n  욕설  \n")
+        
+        forword = Forword(self.forbidden_words_file)
+        
+        # Test search
+        self.assertTrue(forword.search("This is a bad word"))
+        self.assertTrue(forword.search("This is a badword"))
+        self.assertTrue(forword.search("이것은 나쁜말 입니다"))
+        self.assertTrue(forword.search("이것은 욕설 입니다"))
+
+        # Test replace
+        self.assertEqual(
+            forword.replace("This is a bad word"),
+            "This is a ***"
+        )
+        self.assertEqual(
+            forword.replace("이것은 욕설 입니다"),
+            "이것은 *** 입니다"
+        )
+
 if __name__ == '__main__':
     unittest.main() 

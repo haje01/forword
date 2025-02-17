@@ -50,7 +50,11 @@ private:
 
         std::string line;
         while (std::getline(file, line)) {
-            if (!line.empty()) {
+            // Trim whitespace from both ends
+            line.erase(0, line.find_first_not_of(" \t\n\r"));
+            line.erase(line.find_last_not_of(" \t\n\r") + 1);
+            
+            if (!line.empty()) {  // Skip empty lines after trimming
                 words.push_back(to_utf32(line));
             }
         }

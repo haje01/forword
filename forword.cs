@@ -41,6 +41,7 @@ namespace ForwordLib
             {
                 return File.ReadAllLines(filePath, Encoding.UTF8)
                     .Where(line => !string.IsNullOrWhiteSpace(line))
+                    .Select(line => line.Trim())
                     .ToList();
             }
             catch (Exception ex)
