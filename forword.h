@@ -14,6 +14,7 @@
 #include <codecvt>
 #include <set>
 #include <map>
+#include <iostream>
 
 class Forword {
 friend class NormalizeUtf8Test;
@@ -96,6 +97,7 @@ private:
 
     std::vector<std::u32string> load_forbidden_words(const std::string& file_path) {
         std::vector<std::u32string> words;
+        std::unordered_map<std::string, std::string> normalized_to_original;
         std::ifstream file(file_path);
         
         if (!file.is_open()) {
@@ -114,6 +116,20 @@ private:
                 // Then convert to UTF-32 and normalize spaces/symbols
                 auto utf32_word = to_utf32(normalized_utf8);
                 auto normalized_word = normalize_text(utf32_word);
+                
+                // Convert normalized word back to string for comparison
+                std::string normalized_str = to_utf8(normalized_word);
+                
+                // Check if this normalized form already exists
+                auto it = normalized_to_original.find(normalized_str);
+                if (it != normalized_to_original.end()) {
+                    std::cerr << "Warning: '" << line << "' is equivalent to existing word '" 
+                             << it->second << "' after normalization\n";
+                    continue;  // Skip this word
+                }
+                
+                // Store the mapping and add the word
+                normalized_to_original[normalized_str] = line;
                 words.push_back(normalized_word);
             }
         }

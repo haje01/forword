@@ -1,6 +1,8 @@
 from typing import List, Dict, Set, Optional
 from dataclasses import dataclass, field
 import re
+import os
+import sys
 
 
 @dataclass
@@ -17,6 +19,37 @@ class Forword:
     Uses the Aho-Corasick algorithm for efficient string matching.
     """
     
+    @staticmethod
+    def _normalize_word(word: str) -> str:
+        """Normalize a word by removing spaces and converting to lowercase."""
+        # First normalize accented characters
+        normalized = ''
+        for c in word:
+            # Convert to lowercase
+            if c.isupper():
+                c = c.lower()
+            
+            # Map accented characters
+            code = ord(c)
+            if c in 'àáäâ': c = 'a'
+            elif c in 'èéëê': c = 'e'
+            elif c in 'ìíïî': c = 'i'
+            elif c in 'òóöô': c = 'o'
+            elif c in 'ùúüû': c = 'u'
+            elif c == 'ñ': c = 'n'
+            elif c == 'ß': 
+                normalized += 'ss'
+                continue
+            # Skip combining diacritical marks
+            elif 0x0300 <= code <= 0x036F:
+                continue
+            
+            # Only keep alphanumeric characters
+            if c.isalnum():
+                normalized += c
+        
+        return normalized
+
     def __init__(self, forbidden_words_file: str):
         """
         Initialize Forword with a file containing forbidden words.
@@ -24,26 +57,37 @@ class Forword:
         Args:
             forbidden_words_file: Path to the file containing forbidden words (one per line)
         """
+        if not os.path.exists(forbidden_words_file):
+            raise FileNotFoundError(f"Forbidden words file not found: {forbidden_words_file}")
+
         self.root = TrieNode(is_root=True)
-        self.forbidden_words = self._load_forbidden_words(forbidden_words_file)
+        self.forbidden_words = []
+        normalized_to_original = {}  # Keep track of normalized forms
+
+        with open(forbidden_words_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                word = line.strip()
+                if word:
+                    normalized = self._normalize_text(word)
+                    if normalized in normalized_to_original:
+                        print(f"Warning: '{word}' is equivalent to existing word "
+                              f"'{normalized_to_original[normalized]}' after normalization",
+                              file=sys.stderr)
+                        continue
+                    normalized_to_original[normalized] = word
+                    self.forbidden_words.append(word)
+
         self._build_trie()
         self._build_failure_links()
-
-    def _load_forbidden_words(self, file_path: str) -> List[str]:
-        """Load forbidden words from file."""
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            raise Exception(f"Failed to load forbidden words file: {str(e)}")
 
     def _build_trie(self) -> None:
         """Build trie structure from forbidden words."""
         for word in self.forbidden_words:
+            normalized = self._normalize_text(word)
             node = self.root
-            for char in word:
+            for char in normalized:
                 node = node.children.setdefault(char, TrieNode())
-            node.output.add(word)
+            node.output.add(normalized)
 
     def _build_failure_links(self) -> None:
         """Build failure links for Aho-Corasick algorithm."""
@@ -107,8 +151,32 @@ class Forword:
         return False
 
     def _normalize_text(self, text: str) -> str:
-        """Remove spaces and symbols from text."""
-        return ''.join(ch for ch in text if not ch.isspace() and self._is_word_char(ch))
+        """Normalize text by converting to lowercase and removing accents."""
+        normalized = ''
+        for c in text:
+            # Convert to lowercase
+            if c.isupper():
+                c = c.lower()
+            
+            # Map accented characters
+            if c in 'àáäâ': c = 'a'
+            elif c in 'èéëê': c = 'e'
+            elif c in 'ìíïî': c = 'i'
+            elif c in 'òóöô': c = 'o'
+            elif c in 'ùúüû': c = 'u'
+            elif c == 'ñ': c = 'n'
+            elif c == 'ß': 
+                normalized += 'ss'
+                continue
+            # Skip combining diacritical marks
+            elif 0x0300 <= ord(c) <= 0x036F:
+                continue
+            
+            # Only keep word characters
+            if not c.isspace() and self._is_word_char(c):
+                normalized += c
+        
+        return normalized
 
     def search(self, text: str) -> bool:
         """

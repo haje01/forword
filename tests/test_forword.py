@@ -2,6 +2,8 @@ import unittest
 import os
 import tempfile
 from forword import Forword
+import sys
+from io import StringIO
 
 class TestForword(unittest.TestCase):
     def setUp(self):
@@ -144,6 +146,48 @@ class TestForword(unittest.TestCase):
             forword.replace("un esempio di cattività"),
             "un esempio di ***"
         )
+
+    def test_duplicate_word_warning(self):
+        # Create temporary file with duplicate words
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False) as f:
+            f.write("badword\n"
+                   "b a d w o r d\n"    # Same as "badword" after normalization
+                   "BAD-WORD\n"         # Same as "badword" after normalization
+                   "málaga\n"
+                   "malaga\n"           # Same as "málaga" after normalization
+                   "scheiße\n"
+                   "scheisse\n")        # Same as "scheiße" after normalization
+            temp_file = f.name
+
+        # Capture stderr
+        stderr = StringIO()
+        sys.stderr = stderr
+
+        # Create forword instance (this should trigger warnings)
+        forword = Forword(temp_file)
+
+        # Restore stderr
+        sys.stderr = sys.__stderr__
+
+        # Get warning messages
+        warnings = stderr.getvalue()
+
+        # Check for expected warnings
+        self.assertIn("'b a d w o r d' is equivalent to existing word 'badword'", warnings)
+        self.assertIn("'BAD-WORD' is equivalent to existing word 'badword'", warnings)
+        self.assertIn("'malaga' is equivalent to existing word 'málaga'", warnings)
+        self.assertIn("'scheisse' is equivalent to existing word 'scheiße'", warnings)
+
+        # Test that words are properly detected
+        self.assertTrue(forword.search("This is a badword"))
+        self.assertTrue(forword.search("This is a b a d w o r d"))
+        self.assertTrue(forword.search("This is málaga"))
+        self.assertTrue(forword.search("This is malaga"))
+        self.assertTrue(forword.search("This is scheiße"))
+        self.assertTrue(forword.search("This is scheisse"))
+
+        # Clean up
+        os.unlink(temp_file)
 
 if __name__ == '__main__':
     unittest.main() 

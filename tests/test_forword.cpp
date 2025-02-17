@@ -124,6 +124,46 @@ TEST_F(ForwordTest, MultilingualSupport) {
     EXPECT_EQ(forword.replace(u8"das ist scheiße"), u8"das ist ***");
 }
 
+TEST_F(ForwordTest, DuplicateWordWarning) {
+    // Create a temporary file with duplicate words (after normalization)
+    std::ofstream file(forbidden_words_file);
+    file << "badword\n"
+         << "b a d w o r d\n"    // Same as "badword" after normalization
+         << "BAD-WORD\n"         // Same as "badword" after normalization
+         << "málaga\n"
+         << "malaga\n"           // Same as "málaga" after normalization
+         << "scheiße\n"
+         << "scheisse\n";        // Same as "scheiße" after normalization
+    file.close();
+
+    // Redirect cerr to capture warning messages
+    std::stringstream warning_messages;
+    std::streambuf* old_cerr = std::cerr.rdbuf(warning_messages.rdbuf());
+
+    // Create forword instance (this should trigger warnings)
+    Forword forword(forbidden_words_file);
+
+    // Restore cerr
+    std::cerr.rdbuf(old_cerr);
+
+    // Get warning messages
+    std::string warnings = warning_messages.str();
+
+    // Check for expected warnings
+    EXPECT_TRUE(warnings.find("'b a d w o r d' is equivalent to existing word 'badword'") != std::string::npos);
+    EXPECT_TRUE(warnings.find("'BAD-WORD' is equivalent to existing word 'badword'") != std::string::npos);
+    EXPECT_TRUE(warnings.find("'malaga' is equivalent to existing word 'málaga'") != std::string::npos);
+    EXPECT_TRUE(warnings.find("'scheisse' is equivalent to existing word 'scheiße'") != std::string::npos);
+
+    // Test that only unique words are actually loaded
+    EXPECT_TRUE(forword.search("This is a badword"));     // Original word works
+    EXPECT_TRUE(forword.search("This is a b a d w o r d")); // Spaced version also works
+    EXPECT_TRUE(forword.search("This is málaga"));        // Accented version works
+    EXPECT_TRUE(forword.search("This is malaga"));        // Non-accented version works
+    EXPECT_TRUE(forword.search("This is scheiße"));       // German version works
+    EXPECT_TRUE(forword.search("This is scheisse"));      // Normalized version works
+}
+
 class NormalizeUtf8Test : public ::testing::Test {
 protected:
     static std::string normalize_utf8_test(const std::string& input) {

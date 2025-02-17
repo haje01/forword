@@ -12,7 +12,7 @@ namespace ForwordLib
         private class TrieNode
         {
             public Dictionary<char, TrieNode> Children { get; } = new Dictionary<char, TrieNode>();
-            public TrieNode Fail { get; set; }
+            public TrieNode? Fail { get; set; }
             public HashSet<string> Output { get; } = new HashSet<string>();
             public bool IsRoot { get; set; }
         }
@@ -20,11 +20,41 @@ namespace ForwordLib
         private readonly TrieNode root;
         private readonly List<string> forbiddenWords;
 
+        private static string NormalizeWord(string word)
+        {
+            // Convert to lowercase and remove spaces/symbols
+            return new string(word.ToLower()
+                .Where(c => char.IsLetterOrDigit(c))
+                .ToArray());
+        }
+
         public Forword(string forbiddenWordsFile)
         {
+            if (!File.Exists(forbiddenWordsFile))
+                throw new FileNotFoundException($"Forbidden words file not found: {forbiddenWordsFile}");
+
+            forbiddenWords = new List<string>();
+            var normalizedToOriginal = new Dictionary<string, string>();
+
+            foreach (string? line in File.ReadLines(forbiddenWordsFile))
+            {
+                string word = line?.Trim() ?? "";
+                if (!string.IsNullOrEmpty(word))
+                {
+                    string normalized = NormalizeText(word);
+                    if (normalizedToOriginal.TryGetValue(normalized, out string? existingWord))
+                    {
+                        Console.Error.WriteLine($"Warning: '{word}' is equivalent to existing word " +
+                                              $"'{existingWord}' after normalization");
+                        continue;
+                    }
+                    normalizedToOriginal[normalized] = word;
+                    forbiddenWords.Add(word);
+                }
+            }
+
             try
             {
-                forbiddenWords = LoadForbiddenWords(forbiddenWordsFile);
                 root = new TrieNode { IsRoot = true };
                 BuildTrie();
                 BuildFailureLinks();
@@ -35,27 +65,13 @@ namespace ForwordLib
             }
         }
 
-        private List<string> LoadForbiddenWords(string filePath)
-        {
-            try
-            {
-                return File.ReadAllLines(filePath, Encoding.UTF8)
-                    .Where(line => !string.IsNullOrWhiteSpace(line))
-                    .Select(line => line.Trim())
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed to load forbidden words file: {ex.Message}", ex);
-            }
-        }
-
         private void BuildTrie()
         {
             foreach (var word in forbiddenWords)
             {
+                var normalized = NormalizeText(word);
                 var node = root;
-                foreach (var ch in word)
+                foreach (var ch in normalized)
                 {
                     if (!node.Children.ContainsKey(ch))
                     {
@@ -63,7 +79,7 @@ namespace ForwordLib
                     }
                     node = node.Children[ch];
                 }
-                node.Output.Add(word);
+                node.Output.Add(normalized);
             }
         }
 
@@ -88,7 +104,7 @@ namespace ForwordLib
                     var child = pair.Value;
                     queue.Enqueue(child);
 
-                    var failure = current.Fail;
+                    var failure = current.Fail!;
                     while (failure != null && !failure.Children.ContainsKey(pair.Key))
                     {
                         failure = failure.Fail;
@@ -97,9 +113,12 @@ namespace ForwordLib
                     child.Fail = failure?.Children.GetValueOrDefault(pair.Key) ?? root;
 
                     // Add outputs from failure node
-                    foreach (var output in child.Fail.Output)
+                    if (child.Fail != null)
                     {
-                        child.Output.Add(output);
+                        foreach (var output in child.Fail.Output)
+                        {
+                            child.Output.Add(output);
+                        }
                     }
                 }
             }
@@ -107,7 +126,53 @@ namespace ForwordLib
 
         private string NormalizeText(string text)
         {
-            return new string(text.Where(ch => !char.IsWhiteSpace(ch) && char.IsLetterOrDigit(ch)).ToArray());
+            var normalized = new StringBuilder();
+            foreach (var c in text)
+            {
+                char ch = c;
+                
+                // Convert to lowercase
+                if (char.IsUpper(ch))
+                    ch = char.ToLower(ch);
+                
+                // Map accented characters
+                switch (ch)
+                {
+                    case 'à':
+                    case 'á':
+                    case 'ä':
+                    case 'â': ch = 'a'; break;
+                    case 'è':
+                    case 'é':
+                    case 'ë':
+                    case 'ê': ch = 'e'; break;
+                    case 'ì':
+                    case 'í':
+                    case 'ï':
+                    case 'î': ch = 'i'; break;
+                    case 'ò':
+                    case 'ó':
+                    case 'ö':
+                    case 'ô': ch = 'o'; break;
+                    case 'ù':
+                    case 'ú':
+                    case 'ü':
+                    case 'û': ch = 'u'; break;
+                    case 'ñ': ch = 'n'; break;
+                    case 'ß':
+                        normalized.Append("ss");
+                        continue;
+                }
+                
+                // Skip combining diacritical marks
+                if (ch >= '\u0300' && ch <= '\u036F')
+                    continue;
+                
+                if (!char.IsWhiteSpace(ch) && IsWordChar(ch))
+                    normalized.Append(ch);
+            }
+            
+            return normalized.ToString();
         }
 
         public bool Search(string text)
@@ -116,23 +181,30 @@ namespace ForwordLib
                 return false;
 
             var normalizedText = NormalizeText(text);
-            var current = root;
+            TrieNode? current = root;
 
             foreach (var ch in normalizedText)
             {
-                while (current != root && !current.Children.ContainsKey(ch))
+                while (current != null && !current.Children.ContainsKey(ch))
                 {
                     current = current.Fail;
                 }
 
-                if (current.Children.TryGetValue(ch, out var next))
+                if (current == null)
                 {
-                    current = next;
-                    if (current.Output.Count > 0)
-                    {
-                        return true;
-                    }
+                    current = root;
+                    continue;
                 }
+
+                current = current.Children.GetValueOrDefault(ch);
+                if (current == null)
+                {
+                    current = root;
+                    continue;
+                }
+
+                if (current.Output.Any())
+                    return true;
             }
 
             return false;
@@ -143,22 +215,24 @@ namespace ForwordLib
             if (string.IsNullOrEmpty(text))
                 return text;
 
-            var result = text;
             var normalizedText = NormalizeText(text);
-            var current = root;
-            var matches = new SortedSet<(int start, int end)>();
+            var result = text;
+            TrieNode? current = root;
+            var matches = new List<(int start, int end)>();
             var pos = 0;
 
             // Build mapping between normalized and original text positions
             var normToOrig = new Dictionary<int, int>();
+            var origToNorm = new Dictionary<int, int>();
             var normPos = 0;
 
             // First pass: find word boundaries and build position mappings
             for (int i = 0; i < text.Length; i++)
             {
-                if (char.IsLetterOrDigit(text[i]))
+                if (IsWordChar(text[i]))
                 {
                     normToOrig[normPos] = i;
+                    origToNorm[i] = normPos;
                     normPos++;
                 }
             }
@@ -168,58 +242,98 @@ namespace ForwordLib
             {
                 var ch = normalizedText[pos];
                 
-                while (current != root && !current.Children.ContainsKey(ch))
+                while (current != null && !current.Children.ContainsKey(ch))
                 {
                     current = current.Fail;
                 }
                 
-                if (current.Children.ContainsKey(ch))
+                if (current == null)
                 {
-                    current = current.Children[ch];
+                    current = root;
+                    pos++;
+                    continue;
+                }
+
+                current = current.Children.GetValueOrDefault(ch);
+                if (current == null)
+                {
+                    current = root;
+                    pos++;
+                    continue;
+                }
+
+                foreach (var word in current.Output)
+                {
+                    var normalizedWord = NormalizeText(word);
+                    var wordPos = pos - normalizedWord.Length + 1;
                     
-                    foreach (var word in current.Output)
+                    if (wordPos <= pos && 
+                        normalizedText.Substring(wordPos, normalizedWord.Length) == normalizedWord)
                     {
-                        var normalizedWord = NormalizeText(word);
-                        var wordPos = pos - normalizedWord.Length + 1;
-                        
-                        if (wordPos <= pos && 
-                            normalizedText.Substring(wordPos, normalizedWord.Length) == normalizedWord)
+                        if (normToOrig.ContainsKey(wordPos) && normToOrig.ContainsKey(pos))
                         {
-                            if (normToOrig.ContainsKey(wordPos) && normToOrig.ContainsKey(pos))
+                            var origStart = normToOrig[wordPos];
+                            // Find the last word character after the match
+                            var origEnd = origStart;
+                            for (int i = origStart; i < text.Length; i++)
                             {
-                                var origStart = normToOrig[wordPos];
-                                var origEnd = normToOrig[pos];
-
-                                // Extend boundaries to include adjacent spaces
-                                while (origStart > 0 && char.IsWhiteSpace(text[origStart - 1]))
+                                if (IsWordChar(text[i]) && origToNorm.ContainsKey(i))
                                 {
-                                    origStart--;
+                                    var normIndex = origToNorm[i];
+                                    if (normIndex <= pos)
+                                    {
+                                        origEnd = i;
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
                                 }
-                                while (origEnd < text.Length - 1 && char.IsWhiteSpace(text[origEnd + 1]))
-                                {
-                                    origEnd++;
-                                }
-
-                                matches.Add((origStart, origEnd + 1));
                             }
+                            // If there is a whitespace immediately after the match, include it.
+                            if (origEnd < text.Length - 1 && char.IsWhiteSpace(text[origEnd + 1]))
+                            {
+                                origEnd++;
+                            }
+
+                            matches.Add((origStart, origEnd + 1));
                         }
                     }
                 }
                 pos++;
             }
 
+            // For overlapping matches starting at the same index, keep only the longest match
+            var filteredMatches = matches
+                .GroupBy(m => m.start)
+                .Select(g => g.OrderByDescending(m => m.end).First())
+                .ToList();
+
             // Replace matches from end to start
-            foreach (var (start, end) in matches.Reverse())
+            foreach (var match in filteredMatches.OrderByDescending(m => m.start))
             {
+                var (start, end) = match;
                 var prefix = result.Substring(0, start);
-                var suffix = end < result.Length ? result.Substring(end) : "";
+                var suffix = end < result.Length ? result.Substring(end).TrimStart() : "";
                 
-                // Ensure single space before and after replacement
-                if (prefix.Length > 0 && !char.IsWhiteSpace(prefix[prefix.Length - 1]))
+                // 매칭된 단어 앞의 공백을 하나만 유지
+                if (prefix.Length > 0)
                 {
-                    prefix += " ";
+                    var lastChar = prefix[prefix.Length - 1];
+                    prefix = prefix.TrimEnd();
+                    
+                    // 접두사가 CJK 문자로 끝나거나 공백으로 끝났던 경우 공백 추가
+                    if (char.GetUnicodeCategory(lastChar) == System.Globalization.UnicodeCategory.OtherLetter ||
+                        char.IsWhiteSpace(lastChar))
+                    {
+                        prefix = prefix + " ";
+                    }
                 }
-                if (suffix.Length > 0 && !char.IsWhiteSpace(suffix[0]))
+                
+                // 접미사가 있고 한글/CJK 문자로 시작하면 공백 추가
+                if (!string.IsNullOrEmpty(suffix) && 
+                    (char.GetUnicodeCategory(suffix[0]) == System.Globalization.UnicodeCategory.OtherLetter ||
+                     (suffix[0] >= '\u0400' && suffix[0] <= '\u04FF')))  // Cyrillic range
                 {
                     suffix = " " + suffix;
                 }
@@ -255,6 +369,20 @@ namespace ForwordLib
             // Spanish/Italian
             if (code >= 0x1E00 && code <= 0x1EFF) return true;  // Latin Extended Additional
             if (code >= 0x0100 && code <= 0x017F) return true;  // Latin Extended-A
+            
+            return false;
+        }
+
+        private bool IsCJK(char ch)
+        {
+            int code = (int)ch;
+            
+            // CJK Unified Ideographs
+            if (code >= 0x4E00 && code <= 0x9FFF) return true;
+            
+            // Japanese
+            if (code >= 0x3040 && code <= 0x309F) return true;  // Hiragana
+            if (code >= 0x30A0 && code <= 0x30FF) return true;  // Katakana
             
             return false;
         }
