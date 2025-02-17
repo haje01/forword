@@ -6,21 +6,22 @@ A simple library for quickly searching forbidden words in text messages
 - [한국어](#한국어)
 
 <a name="english"></a>
+
 ## English
 
 ## Introduction
-forword is a simple library for quickly searching forbidden words in text messages. It reads a text file containing forbidden words and rapidly detects them within any given text message. It is available as implementations for various programming languages.
+Forword is a simple library designed for quickly searching banned words in text messages. It reads a banned words .csv file and efficiently identifies banned words in a given text message. The library is available for various programming languages.
 
-### Main Features
-- Load a text file with forbidden words
-- Fast search for forbidden words in any text
-- Detects forbidden words even when they are interleaved with spaces or symbols
-- Provides functionality to replace detected forbidden words
-- Supports multiple languages (UTF-8)
+### Key Features
+- Load text files with registered banned words
+- Fast search for banned words in a given text
+- Ability to search for banned words even if they contain spaces or symbols
+- Replace detected banned words
+- Multilingual support (UTF-8)
 
 ### Supported Languages
 
-The library supports the following languages and character sets. For every supported language, accented characters are normalized to their base form and searches are case-insensitive.
+The following languages and scripts are supported. For all supported languages, accented characters are normalized to their base characters, and case is ignored.
 
 - **Latin-based:**
   - English
@@ -29,22 +30,22 @@ The library supports the following languages and character sets. For every suppo
   - German: ä → a, ö → o, ü → u, ß → ss
 
 - **Asian Languages:**
-  - Korean: Hangul syllables and Jamo
-  - Japanese: Hiragana and Katakana
+  - Korean: Hangul syllables and jamo
+  - Japanese: Hiragana, Katakana
   - Chinese: CJK Unified Ideographs
 
 - **Others:**
-  - Russian: Cyrillic characters
+  - Russian: Cyrillic script
 
 ### Supported Programming Languages
-- C++ (11 or higher)
-- C# (.NET Standard 2.0 or higher)
-- Python (3.7 or higher)
+- C++ (11 or later)
+- C# (.NET Standard 2.0 or later)
+- Python (3.7 or later)
 
 ### Installation
-The library is distributed as a single source code file (for C++ as a header-only library), making it very easy to include in your project.
+The library is provided as a single source code file (header-only library for C++), making it easy to add to your project.
 
-Add the appropriate file for your programming language to your project from the following directory structure:
+Simply add the appropriate file for your desired programming language to your project with the following directory structure:
 
 ```
 forword/
@@ -53,40 +54,42 @@ forword/
 └── forword.py
 ```
 
-## Sample Code
+## Example Code
 
-Given a forbidden words text file like this:
+Assuming you have the following banned words text file:
 
 `forbidden_words.txt`
-```
-bad
-badword
-```
-> **Note:** There is no need to register additional variations of the same forbidden word by adding extra spaces or symbols.
 
-Here are examples for each programming language:
+```
+바보
+멍청이
+```
+
+> Note: There is no need to register new banned words by adding spaces or symbols to existing ones.
+
+Here are example codes for each programming language:
 
 ### C++
 ```cpp
 #include "forword.h"
 
 int main() {
-    // Path to the forbidden words file
+    // Path to the banned words file
     const char* forbidden_words_file = "forbidden_words.txt";
 
-    // Create a forword instance for searching
+    // Create a banned words search object
     Forword forword(forbidden_words_file);
 
     // Text to search
-    const char* text = "This message contains a bad word.";
+    const char* text = "이 메시지에는 금칙어가 포함되어 있습니다.";
 
-    // Search for forbidden words
+    // Search for banned words
     bool is_forbidden = forword.search(text);
 
-    // Print result
-    printf("Forbidden word search result: %s\n", is_forbidden ? "Found" : "Not found");
+    // Output the result
+    printf("Banned word search result: %s\n", is_forbidden ? "Found" : "Not found");
 
-    // Replace forbidden words
+    // Replace banned words
     const char* replaced_text = forword.replace(text, "***");
     printf("Replaced text: %s\n", replaced_text);
 
@@ -95,6 +98,7 @@ int main() {
 ```
 
 ### C#
+
 ```csharp
 using Forword;
 
@@ -102,22 +106,22 @@ class Program
 {
     static void Main(string[] args)
     {
-        // Path to the forbidden words file
+        // Path to the banned words file
         const string forbidden_words_file = "forbidden_words.txt";
 
-        // Create a forword instance for searching
+        // Create a banned words search object
         Forword forword = new Forword(forbidden_words_file);
 
         // Text to search
-        const string text = "This message contains a bad word.";
+        const string text = "이 메시지에는 금칙어가 포함되어 있습니다.";
 
-        // Search for forbidden words
+        // Search for banned words
         bool is_forbidden = forword.Search(text);
 
-        // Print result
-        Console.WriteLine("Forbidden word search result: " + (is_forbidden ? "Found" : "Not found"));
+        // Output the result
+        Console.WriteLine("Banned word search result: " + (is_forbidden ? "Found" : "Not found"));
 
-        // Replace forbidden words
+        // Replace banned words
         string replaced_text = forword.Replace(text, "***");
         Console.WriteLine("Replaced text: " + replaced_text);
     }
@@ -130,44 +134,44 @@ from forword import Forword
 
 forword = Forword("forbidden_words.txt")
 
-text = "This message contains a bad word."
+text = "이 메시지에는 금칙어가 포함되어 ���습니다."
 
 is_forbidden = forword.search(text)
-print(f"Forbidden word search result: {'Found' if is_forbidden else 'Not found'}")
+print(f"Banned word search result: {'Found' if is_forbidden else 'Not found'}")
 
 replaced_text = forword.replace(text, "***")
 print(f"Replaced text: {replaced_text}")
 ```
 
-## Custom Ignored Symbols Examples
-This section demonstrates how to customize forbidden word detection by using a custom set of ignored symbols.
+## Custom Ignored Symbols Example
+This section demonstrates how to customize the banned word search behavior using user-defined ignored symbols.
 
 ### C#
 ```csharp
-// Example: Only hyphen ('-') and space (' ') are ignored.
+// Example: Ignoring only hyphens ('-') and spaces (' ')
 var customSymbols = new[] { '-', ' ' };
 Forword forwordCustom = new Forword("forbidden_words.txt", customSymbols);
 
 if (forwordCustom.Search("b-a-d-w-o-r-d"))
 {
-    Console.WriteLine("Forbidden word detected.");
+    Console.WriteLine("Banned word detected.");
 }
 else
 {
-    Console.WriteLine("Forbidden word not detected.");
+    Console.WriteLine("No banned word detected.");
 }
 ```
 
 ### Python
 ```python
-# Example: Only hyphen ('-') and space are ignored.
+# Example: Setting to ignore only hyphens ('-') and spaces
 custom_symbols = {'-', ' '}
 forword = Forword("forbidden_words.txt", ignored_symbols=custom_symbols)
 
 if forword.search("b-a-d-w-o-r-d"):
-    print("Forbidden word detected.")
+    print("Banned word detected.")
 else:
-    print("Forbidden word not detected.")
+    print("No banned word detected.")
 ```
 
 ### C++
@@ -177,37 +181,37 @@ else:
 #include <iostream>
 
 int main(){
-    // Example: Only hyphen ('-') and space are ignored.
+    // Example: Ignoring only hyphens ('-') and spaces
     std::unordered_set<char> customSymbols{'-', ' '};
     Forword forword("forbidden_words.txt", customSymbols);
     
     if(forword.search("b-a-d-w-o-r-d"))
-        std::cout << "Forbidden word detected." << std::endl;
+        std::cout << "Banned word detected." << std::endl;
     else
-        std::cout << "Forbidden word not detected." << std::endl;
+        std::cout << "No banned word detected." << std::endl;
         
     return 0;
 }
 ```
 
-## Important Notes
-- The forbidden words text file should contain one word per line.
-- There is no need to register additional variations of a forbidden word (by adding extra spaces or symbols).
-- For frequent usage, it is recommended to initialize the Forword object once and reuse it.
+## Notes
+- The banned words text file should be a text file with one word per line.
+- There is no need to register new banned words by adding spaces or symbols to existing ones.
+- If called frequently, it is recommended to initialize the Forword object once and reuse it.
 
-## For Forword Developers
+## Forword Developers
 
 ### Prerequisites
-Tools required for running tests in each language:
+Tools required to run tests for each language:
 
 #### Python
-- Python 3.7 or higher
-- unittest (built-in package)
+- Python 3.7 or later
+- unittest (Python standard package)
 
 #### C++
 - Google Test
 - A C++17 compatible compiler
-- CMake 3.10 or higher
+- CMake 3.10 or later
 
 #### C#
 - .NET SDK
@@ -235,15 +239,15 @@ cd bench
 dotnet run
 ```
 
-The benchmark runs under the following conditions:
-- Using the same forbidden words file (bad, badword, 나쁜말, 욕설)
-- Using the same input text ("이것은 나쁜말 입니다. This is a bad word. 여기에 욕설이 있습니다.")
+Benchmarks are run under the following conditions:
+- Same banned words file (bad, badword, 나쁜말, 욕설)
+- Same input text ("이것은 나쁜말 입니다. This is a bad word. 여기에 욕설이 있습니다.")
 - 10,000 iterations
 
 Benchmark results include:
-- Total number of operations
-- Total elapsed time (in seconds)
-- Throughput (operations per second)
+- Total execution count
+- Total elapsed time (seconds)
+- Throughput (operations/sec)
 
 ### Running Tests
 
@@ -267,41 +271,29 @@ dotnet test tests/test_forword.csproj
 ```
 
 ### Test Cases
-The following test cases are implemented across all language versions:
+The same test cases are implemented for all language versions:
 
-1. **Standard forbidden word search**
-   - Common forbidden word search
-   - Handling cases with no forbidden words
+1. **Basic Search Functionality**
+   - General banned word search
+   - Handling when no banned words are present
 
-2. **Forbidden words containing spaces**
-   - Forbidden words containing spaces
+2. **Handling Spaces and Symbols**
+   - Banned words with spaces
+   - Banned words with symbols
+   - Irregular space handling
 
-3. **Forbidden words containing symbols**
-   - Forbidden words containing symbols
-
-4. **Handling irregular spacing**
-   - Handling irregular spacing
-
-5. **Searching for Korean forbidden words**
-   - Searching for Korean forbidden words
-
-6. **UTF-8 encoding handling**
+3. **Multilingual Support**
+   - Multilingual banned word search
    - UTF-8 encoding handling
 
-7. **Basic replacement functionality**
-   - Basic replacement functionality
+4. **Replacement Functionality**
+   - Basic replacement operation
+   - Replacement with spaces and symbols
+   - Multilingual text replacement
 
-8. **Replacement when spaces and symbols are included**
-   - Replacement when spaces and symbols are included
-
-9. **Replacement for multi-language texts**
-   - Replacement for multi-language texts
-
-10. **Handling empty inputs**
-    - Handling empty inputs
-
-11. **Handling file loading errors**
-    - Handling file loading errors
+5. **Exception Handling**
+   - Handling empty input
+   - Handling file loading failures
 
 ### Project Structure
 ```
@@ -601,7 +593,7 @@ dotnet test tests/test_forword.csproj
    - 불규칙한 공백 처리
 
 3. **다국어 지원**
-   - 한글 금칙어 검색
+   - 다국어 금칙어 검색
    - UTF-8 인코딩 처리
 
 4. **치환 기능**
