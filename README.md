@@ -228,9 +228,12 @@ forword/
 ├── forword.h
 ├── forword.cs
 ├── forword.py
+├── bench/
+│   ├── bench_forword.cpp
+│   ├── bench_forword.cs
+│   └── bench_forword.py
 └── tests/
     ├── test_forword.cpp
-    ├── ForwordTests.cs
     └── test_forword.py
 ```
 
@@ -457,4 +460,16 @@ dotnet test tests/test_forword.csproj
    - 파일 로딩 실패 처리
 
 ### Project Structure
+```
+forword/
+├── forword.h
+├── forword.cs
+├── forword.py
+├── bench/
+│   ├── bench_forword.cpp
+│   ├── bench_forword.cs
+│   └── bench_forword.py
+└── tests/
+    ├── test_forword.cpp
+    └── test_forword.py
 ```
