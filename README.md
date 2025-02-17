@@ -5,23 +5,23 @@ A simple library for quickly searching forbidden words in text messages
 - [English](#english)
 - [한국어](#한국어)
 
-<a name="english"></a>
-
+<a name="English"></a>
 ## English
 
 ## Introduction
-Forword is a simple library designed for quickly searching banned words in text messages. It reads a banned words .csv file and efficiently identifies banned words in a given text message. The library is available for various programming languages.
+forword is a simple library for quickly searching forbidden words in text messages.
+It reads forbidden words from a .csv file and quickly finds them in given text messages. It is provided as a library for various programming languages.
 
 ### Key Features
-- Load text files with registered banned words
-- Fast search for banned words in a given text
-- Ability to search for banned words even if they contain spaces or symbols
-- Replace detected banned words
-- Multilingual support (UTF-8)
+- Loading text files containing forbidden words
+- High-speed search for forbidden words in given text
+- Ability to detect forbidden words even when they contain spaces or symbols
+- Function to replace detected forbidden words
+- Multi-language support (UTF-8)
 
 ### Supported Languages
 
-The following languages and scripts are supported. For all supported languages, accented characters are normalized to their base characters, and case is ignored.
+The following languages and characters are supported. For all supported languages, accented characters are normalized to basic characters, and the search is case-insensitive.
 
 - **Latin-based:**
   - English
@@ -30,22 +30,22 @@ The following languages and scripts are supported. For all supported languages, 
   - German: ä → a, ö → o, ü → u, ß → ss
 
 - **Asian Languages:**
-  - Korean: Hangul syllables and jamo
+  - Korean: Hangul syllables and Jamo
   - Japanese: Hiragana, Katakana
   - Chinese: CJK Unified Ideographs
 
 - **Others:**
-  - Russian: Cyrillic script
+  - Russian: Cyrillic characters
 
 ### Supported Programming Languages
-- C++ (11 or later)
-- C# (.NET Standard 2.0 or later)
-- Python (3.7 or later)
+- C++ (11 or higher)
+- C# (.NET Standard 2.0 or higher)
+- Python (3.7 or higher)
 
 ### Installation
-The library is provided as a single source code file (header-only library for C++), making it easy to add to your project.
+Since it's provided as a single source code file (header-only library for C++), it's easy to add to your project.
 
-Simply add the appropriate file for your desired programming language to your project with the following directory structure:
+With the following directory structure, simply add the file that matches your preferred programming language to your project:
 
 ```
 forword/
@@ -54,42 +54,41 @@ forword/
 └── forword.py
 ```
 
-## Example Code
+## Code Examples
 
-Assuming you have the following banned words text file:
+Assuming you have a forbidden words text file like this:
 
 `forbidden_words.txt`
-
 ```
-바보
-멍청이
+bad
+badword
 ```
 
-> Note: There is no need to register new banned words by adding spaces or symbols to existing ones.
+> Note: There's no need to register variations of the same forbidden word with added spaces or symbols.
 
-Here are example codes for each programming language:
+Here are examples for each programming language:
 
 ### C++
 ```cpp
 #include "forword.h"
 
 int main() {
-    // Path to the banned words file
+    // Path to forbidden words file
     const char* forbidden_words_file = "forbidden_words.txt";
 
-    // Create a banned words search object
+    // Create forbidden word search object
     Forword forword(forbidden_words_file);
 
     // Text to search
-    const char* text = "이 메시지에는 금칙어가 포함되어 있습니다.";
+    const char* text = "This message contains a forbidden word.";
 
-    // Search for banned words
+    // Search for forbidden words
     bool is_forbidden = forword.search(text);
 
-    // Output the result
-    printf("Banned word search result: %s\n", is_forbidden ? "Found" : "Not found");
+    // Print results
+    printf("Search result: %s\n", is_forbidden ? "Found" : "Not found");
 
-    // Replace banned words
+    // Replace forbidden words
     const char* replaced_text = forword.replace(text, "***");
     printf("Replaced text: %s\n", replaced_text);
 
@@ -98,7 +97,6 @@ int main() {
 ```
 
 ### C#
-
 ```csharp
 using Forword;
 
@@ -106,22 +104,22 @@ class Program
 {
     static void Main(string[] args)
     {
-        // Path to the banned words file
+        // Path to forbidden words file
         const string forbidden_words_file = "forbidden_words.txt";
 
-        // Create a banned words search object
+        // Create forbidden word search object
         Forword forword = new Forword(forbidden_words_file);
 
         // Text to search
-        const string text = "이 메시지에는 금칙어가 포함되어 있습니다.";
+        const string text = "This message contains a forbidden word.";
 
-        // Search for banned words
+        // Search for forbidden words
         bool is_forbidden = forword.Search(text);
 
-        // Output the result
-        Console.WriteLine("Banned word search result: " + (is_forbidden ? "Found" : "Not found"));
+        // Print results
+        Console.WriteLine("Search result: " + (is_forbidden ? "Found" : "Not found"));
 
-        // Replace banned words
+        // Replace forbidden words
         string replaced_text = forword.Replace(text, "***");
         Console.WriteLine("Replaced text: " + replaced_text);
     }
@@ -134,44 +132,44 @@ from forword import Forword
 
 forword = Forword("forbidden_words.txt")
 
-text = "이 메시지에는 금칙어가 포함되어 ���습니다."
+text = "This message contains a forbidden word."
 
 is_forbidden = forword.search(text)
-print(f"Banned word search result: {'Found' if is_forbidden else 'Not found'}")
+print(f"Search result: {'Found' if is_forbidden else 'Not found'}")
 
 replaced_text = forword.replace(text, "***")
 print(f"Replaced text: {replaced_text}")
 ```
 
-## Custom Ignored Symbols Example
-This section demonstrates how to customize the banned word search behavior using user-defined ignored symbols.
+## Custom Ignore Symbols Examples
+This section demonstrates how to customize the forbidden word search behavior using user-defined ignore symbols.
 
 ### C#
 ```csharp
-// Example: Ignoring only hyphens ('-') and spaces (' ')
+// Example: Only ignore hyphens('-') and spaces(' ')
 var customSymbols = new[] { '-', ' ' };
 Forword forwordCustom = new Forword("forbidden_words.txt", customSymbols);
 
 if (forwordCustom.Search("b-a-d-w-o-r-d"))
 {
-    Console.WriteLine("Banned word detected.");
+    Console.WriteLine("Forbidden word detected.");
 }
 else
 {
-    Console.WriteLine("No banned word detected.");
+    Console.WriteLine("No forbidden word detected.");
 }
 ```
 
 ### Python
 ```python
-# Example: Setting to ignore only hyphens ('-') and spaces
+# Example: Only ignore hyphens('-') and spaces
 custom_symbols = {'-', ' '}
 forword = Forword("forbidden_words.txt", ignored_symbols=custom_symbols)
 
 if forword.search("b-a-d-w-o-r-d"):
-    print("Banned word detected.")
+    print("Forbidden word detected.")
 else:
-    print("No banned word detected.")
+    print("No forbidden word detected.")
 ```
 
 ### C++
@@ -181,37 +179,37 @@ else:
 #include <iostream>
 
 int main(){
-    // Example: Ignoring only hyphens ('-') and spaces
+    // Example: Only ignore hyphens('-') and spaces
     std::unordered_set<char> customSymbols{'-', ' '};
     Forword forword("forbidden_words.txt", customSymbols);
     
     if(forword.search("b-a-d-w-o-r-d"))
-        std::cout << "Banned word detected." << std::endl;
+        std::cout << "Forbidden word detected." << std::endl;
     else
-        std::cout << "No banned word detected." << std::endl;
+        std::cout << "No forbidden word detected." << std::endl;
         
     return 0;
 }
 ```
 
-## Notes
-- The banned words text file should be a text file with one word per line.
-- There is no need to register new banned words by adding spaces or symbols to existing ones.
-- If called frequently, it is recommended to initialize the Forword object once and reuse it.
+## Important Notes
+- The forbidden words text file should contain one word per line.
+- There's no need to register variations of the same forbidden word with added spaces or symbols.
+- For frequent calls, it's recommended to initialize the Forword object once and reuse it.
 
 ## Forword Developers
 
 ### Prerequisites
-Tools required to run tests for each language:
+Tools needed to run tests for each language:
 
 #### Python
-- Python 3.7 or later
+- Python 3.7 or higher
 - unittest (Python standard package)
 
 #### C++
 - Google Test
 - A C++17 compatible compiler
-- CMake 3.10 or later
+- CMake 3.10 or higher
 
 #### C#
 - .NET SDK
@@ -240,13 +238,13 @@ dotnet run
 ```
 
 Benchmarks are run under the following conditions:
-- Same banned words file (bad, badword, 나쁜말, 욕설)
-- Same input text ("이것은 나쁜말 입니다. This is a bad word. 여기에 욕설이 있습니다.")
+- Same forbidden words file (bad, badword, badlanguage, profanity)
+- Same input text ("This is a bad word. This contains profanity.")
 - 10,000 iterations
 
 Benchmark results include:
-- Total execution count
-- Total elapsed time (seconds)
+- Total number of executions
+- Total time taken (seconds)
 - Throughput (operations/sec)
 
 ### Running Tests
@@ -274,26 +272,26 @@ dotnet test tests/test_forword.csproj
 The same test cases are implemented for all language versions:
 
 1. **Basic Search Functionality**
-   - General banned word search
-   - Handling when no banned words are present
+   - Regular forbidden word search
+   - Handling cases with no forbidden words
 
-2. **Handling Spaces and Symbols**
-   - Banned words with spaces
-   - Banned words with symbols
-   - Irregular space handling
+2. **Space and Symbol Handling**
+   - Words with spaces
+   - Words with symbols
+   - Irregular spacing
 
-3. **Multilingual Support**
-   - Multilingual banned word search
+3. **Multi-language Support**
+   - Multi-language forbidden word search
    - UTF-8 encoding handling
 
-4. **Replacement Functionality**
-   - Basic replacement operation
+4. **Replacement Function**
+   - Basic replacement behavior
    - Replacement with spaces and symbols
-   - Multilingual text replacement
+   - Multi-language text replacement
 
 5. **Exception Handling**
-   - Handling empty input
-   - Handling file loading failures
+   - Empty input handling
+   - File loading failure handling
 
 ### Project Structure
 ```
