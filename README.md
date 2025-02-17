@@ -63,6 +63,8 @@ Given a forbidden words text file like this:
 bad
 badword
 ```
+> Note: There's no need to register variations of the same forbidden word with added spaces or symbols.
+
 
 Here are examples for each programming language:
 
@@ -318,6 +320,8 @@ forword/
 바보
 멍청이
 ```
+
+> 주의: 동일 금칙어에 공백이나 기호를 포함하여 새로운 금칙어로 등록하실 필요는 없습니다.
 
 각 프로그래밍 언어에 맞는 예제 코드는 아래와 같습니다.
 
