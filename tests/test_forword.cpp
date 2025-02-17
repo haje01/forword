@@ -164,6 +164,43 @@ TEST_F(ForwordTest, DuplicateWordWarning) {
     EXPECT_TRUE(forword.search("This is scheisse"));      // Normalized version works
 }
 
+TEST_F(ForwordTest, CustomIgnoredSymbols) {
+    // 임시 금칙어 파일 생성
+    std::string temp_file = temp_dir + "/custom_ignored_symbols.txt";
+    std::ofstream ofs(temp_file);
+    ofs << "badword\ntest" << std::endl;
+    ofs.close();
+    
+    // 기본 무시 기호로 테스트
+    Forword default_forword(temp_file);
+    EXPECT_TRUE(default_forword.search("b-a-d-w-o-r-d"));
+    EXPECT_TRUE(default_forword.search("t.e.s.t"));
+    EXPECT_TRUE(default_forword.search("b a d w o r d"));
+    
+    // 사용자 정의 무시 기호로 테스트 (하이픈과 공백만)
+    std::unordered_set<char> custom_symbols{'-', ' '};
+    Forword custom_forword(temp_file, custom_symbols);
+    EXPECT_TRUE(custom_forword.search("b-a-d-w-o-r-d"));
+    EXPECT_TRUE(custom_forword.search("b a d w o r d"));
+    EXPECT_FALSE(custom_forword.search("b.a.d.w.o.r.d"));
+    EXPECT_FALSE(custom_forword.search("t.e.s.t"));
+    
+    // 무시 기호 없이 테스트
+    Forword strict_forword(temp_file, std::unordered_set<char>{});
+    EXPECT_FALSE(strict_forword.search("b-a-d-w-o-r-d"));
+    EXPECT_FALSE(strict_forword.search("b a d w o r d"));
+    EXPECT_FALSE(strict_forword.search("b.a.d.w.o.r.d"));
+    EXPECT_TRUE(strict_forword.search("badword"));
+    
+    // 치환 기능 테스트
+    EXPECT_EQ("This is ***", 
+        custom_forword.replace("This is b-a-d-w-o-r-d"));
+    EXPECT_EQ("This is ***", 
+        custom_forword.replace("This is b a d w o r d"));
+    EXPECT_EQ("This is b.a.d.w.o.r.d",
+        custom_forword.replace("This is b.a.d.w.o.r.d"));
+}
+
 class NormalizeUtf8Test : public ::testing::Test {
 protected:
     static std::string normalize_utf8_test(const std::string& input) {

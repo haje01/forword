@@ -177,4 +177,48 @@ public class TestForword
         // Clean up
         File.Delete(tempFile);
     }
+
+    [TestMethod]
+    public void TestCustomIgnoredSymbols()
+    {
+        // Create temporary file with test words
+        string tempFile = Path.GetTempFileName();
+        File.WriteAllText(tempFile, "badword\ntest");
+        
+        try
+        {
+            // Test with default ignored symbols
+            var defaultForword = new Forword(tempFile);
+            Assert.IsTrue(defaultForword.Search("b-a-d-w-o-r-d"));
+            Assert.IsTrue(defaultForword.Search("t.e.s.t"));
+            Assert.IsTrue(defaultForword.Search("b a d w o r d"));
+            
+            // Test with custom ignored symbols (only hyphen and space)
+            var customForword = new Forword(tempFile, new[] { '-', ' ' });
+            Assert.IsTrue(customForword.Search("b-a-d-w-o-r-d"));
+            Assert.IsTrue(customForword.Search("b a d w o r d"));
+            Assert.IsFalse(customForword.Search("b.a.d.w.o.r.d"));  // period is not ignored
+            Assert.IsFalse(customForword.Search("t.e.s.t"));        // period is not ignored
+            
+            // Test with empty ignored symbols
+            var strictForword = new Forword(tempFile, Array.Empty<char>());
+            Assert.IsFalse(strictForword.Search("b-a-d-w-o-r-d"));
+            Assert.IsFalse(strictForword.Search("b a d w o r d"));
+            Assert.IsFalse(strictForword.Search("b.a.d.w.o.r.d"));
+            Assert.IsTrue(strictForword.Search("badword"));
+            
+            // Test replacement with custom ignored symbols
+            Assert.AreEqual("This is ***", 
+                customForword.Replace("This is b-a-d-w-o-r-d"));
+            Assert.AreEqual("This is ***", 
+                customForword.Replace("This is b a d w o r d"));
+            Assert.AreEqual("This is b.a.d.w.o.r.d",  // not replaced
+                customForword.Replace("This is b.a.d.w.o.r.d"));
+        }
+        finally
+        {
+            // Clean up
+            File.Delete(tempFile);
+        }
+    }
 } 

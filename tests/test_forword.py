@@ -189,5 +189,48 @@ class TestForword(unittest.TestCase):
         # Clean up
         os.unlink(temp_file)
 
+    def test_custom_ignored_symbols(self):
+        # 임시 금칙어 파일 생성
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+            temp_file.write('badword\ntest\n')
+            temp_file_path = temp_file.name
+        
+        try:
+            # 기본 무시 기호로 테스트
+            default_forword = Forword(temp_file_path)
+            self.assertTrue(default_forword.search('b-a-d-w-o-r-d'))
+            self.assertTrue(default_forword.search('t.e.s.t'))
+            self.assertTrue(default_forword.search('b a d w o r d'))
+            
+            # 사용자 정의 무시 기호로 테스트 (하이픈과 공백만)
+            custom_forword = Forword(temp_file_path, ignored_symbols={'-', ' '})
+            self.assertTrue(custom_forword.search('b-a-d-w-o-r-d'))
+            self.assertTrue(custom_forword.search('b a d w o r d'))
+            self.assertFalse(custom_forword.search('b.a.d.w.o.r.d'))
+            self.assertFalse(custom_forword.search('t.e.s.t'))
+            
+            # 무시 기호 없이 테스트
+            strict_forword = Forword(temp_file_path, ignored_symbols=set())
+            self.assertFalse(strict_forword.search('b-a-d-w-o-r-d'))
+            self.assertFalse(strict_forword.search('b a d w o r d'))
+            self.assertFalse(strict_forword.search('b.a.d.w.o.r.d'))
+            self.assertTrue(strict_forword.search('badword'))
+            
+            # 치환 기능 테스트
+            self.assertEqual(
+                'This is ***',
+                custom_forword.replace('This is b-a-d-w-o-r-d')
+            )
+            self.assertEqual(
+                'This is ***',
+                custom_forword.replace('This is b a d w o r d')
+            )
+            self.assertEqual(
+                'This is b.a.d.w.o.r.d',
+                custom_forword.replace('This is b.a.d.w.o.r.d')
+            )
+        finally:
+            os.unlink(temp_file_path)
+
 if __name__ == '__main__':
     unittest.main() 

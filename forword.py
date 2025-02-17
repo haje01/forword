@@ -19,6 +19,12 @@ class Forword:
     Uses the Aho-Corasick algorithm for efficient string matching.
     """
     
+    # 기본적으로 무시할 기호들
+    DEFAULT_IGNORED_SYMBOLS = {
+        ' ', '-', '.', '_', "'", '"', '!', '?', '@', '#', '$', '%', '^', '&', '*',
+        '(', ')', '+', '=', '[', ']', '{', '}', '|', '\\', '/', ':', ';', ',', '<', '>'
+    }
+
     @staticmethod
     def _normalize_word(word: str) -> str:
         """Normalize a word by removing spaces and converting to lowercase."""
@@ -50,12 +56,13 @@ class Forword:
         
         return normalized
 
-    def __init__(self, forbidden_words_file: str):
+    def __init__(self, forbidden_words_file: str, ignored_symbols=None):
         """
         Initialize Forword with a file containing forbidden words.
         
         Args:
             forbidden_words_file: Path to the file containing forbidden words (one per line)
+            ignored_symbols (set, optional): Set of symbols to ignore. None uses default.
         """
         if not os.path.exists(forbidden_words_file):
             raise FileNotFoundError(f"Forbidden words file not found: {forbidden_words_file}")
@@ -63,6 +70,11 @@ class Forword:
         self.root = TrieNode(is_root=True)
         self.forbidden_words = []
         normalized_to_original = {}  # Keep track of normalized forms
+
+        self.ignored_symbols = (
+            set(ignored_symbols) if ignored_symbols is not None 
+            else self.DEFAULT_IGNORED_SYMBOLS
+        )
 
         with open(forbidden_words_file, 'r', encoding='utf-8') as f:
             for line in f:
@@ -173,7 +185,7 @@ class Forword:
                 continue
             
             # Only keep word characters
-            if not c.isspace() and self._is_word_char(c):
+            if c not in self.ignored_symbols and self._is_word_char(c):
                 normalized += c
         
         return normalized

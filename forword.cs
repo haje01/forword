@@ -17,21 +17,136 @@ namespace ForwordLib
             public bool IsRoot { get; set; }
         }
 
+        // 기본적으로 무시할 기호들
+        private static readonly HashSet<char> DefaultIgnoredSymbols = new HashSet<char>
+        {
+            ' ', '-', '.', '_', '\'', '"', '!', '?', '@', '#', '$', '%', '^', '&', '*',
+            '(', ')', '+', '=', '[', ']', '{', '}', '|', '\\', '/', ':', ';', ',', '<', '>'
+        };
+
+        private readonly HashSet<char> ignoredSymbols;
         private readonly TrieNode root;
         private readonly List<string> forbiddenWords;
 
-        private static string NormalizeWord(string word)
+        private string NormalizeWord(string word)
         {
-            // Convert to lowercase and remove spaces/symbols
-            return new string(word.ToLower()
-                .Where(c => char.IsLetterOrDigit(c))
-                .ToArray());
+            var normalized = new StringBuilder();
+            foreach (var c in word)
+            {
+                char ch = c;
+                // Convert to lowercase
+                if (char.IsUpper(ch))
+                    ch = char.ToLower(ch);
+                
+                // Map accented characters
+                switch (ch)
+                {
+                    case 'à':
+                    case 'á':
+                    case 'ä':
+                    case 'â': ch = 'a'; break;
+                    case 'è':
+                    case 'é':
+                    case 'ë':
+                    case 'ê': ch = 'e'; break;
+                    case 'ì':
+                    case 'í':
+                    case 'ï':
+                    case 'î': ch = 'i'; break;
+                    case 'ò':
+                    case 'ó':
+                    case 'ö':
+                    case 'ô': ch = 'o'; break;
+                    case 'ù':
+                    case 'ú':
+                    case 'ü':
+                    case 'û': ch = 'u'; break;
+                    case 'ñ': ch = 'n'; break;
+                    case 'ß':
+                        normalized.Append("ss");
+                        continue;
+                }
+                
+                // Skip combining diacritical marks
+                if (ch >= '\u0300' && ch <= '\u036F')
+                    continue;
+                
+                if (!DefaultIgnoredSymbols.Contains(ch) && IsWordChar(ch))
+                    normalized.Append(ch);
+            }
+            return normalized.ToString();
         }
 
-        public Forword(string forbiddenWordsFile)
+        private string NormalizeForSearch(string text)
+        {
+            var normalized = new StringBuilder();
+            foreach (var c in text)
+            {
+                char ch = c;
+                
+                // Convert to lowercase
+                if (char.IsUpper(ch))
+                    ch = char.ToLower(ch);
+                
+                // Map accented characters
+                switch (ch)
+                {
+                    case 'à':
+                    case 'á':
+                    case 'ä':
+                    case 'â': ch = 'a'; break;
+                    case 'è':
+                    case 'é':
+                    case 'ë':
+                    case 'ê': ch = 'e'; break;
+                    case 'ì':
+                    case 'í':
+                    case 'ï':
+                    case 'î': ch = 'i'; break;
+                    case 'ò':
+                    case 'ó':
+                    case 'ö':
+                    case 'ô': ch = 'o'; break;
+                    case 'ù':
+                    case 'ú':
+                    case 'ü':
+                    case 'û': ch = 'u'; break;
+                    case 'ñ': ch = 'n'; break;
+                    case 'ß':
+                        normalized.Append("ss");
+                        continue;
+                }
+                
+                // Skip combining diacritical marks
+                if (ch >= '\u0300' && ch <= '\u036F')
+                    continue;
+                
+                // 만약 사용자 정의 무시 기호(ignoredSymbols)가 기본값과 동일하다면,
+                // 기존처럼 단어 문자(IsWordChar)만 남김.
+                // 그렇지 않으면, 전달된 ignoredSymbols에 있는 문자만 제거하고 그대로 유지.
+                if (ignoredSymbols.SetEquals(DefaultIgnoredSymbols))
+                {
+                    if (!ignoredSymbols.Contains(ch) && IsWordChar(ch))
+                        normalized.Append(ch);
+                }
+                else
+                {
+                    if (!ignoredSymbols.Contains(ch))
+                        normalized.Append(ch);
+                }
+            }
+            
+            return normalized.ToString();
+        }
+
+        public Forword(string forbiddenWordsFile, IEnumerable<char>? ignoredSymbols = null)
         {
             if (!File.Exists(forbiddenWordsFile))
                 throw new FileNotFoundException($"Forbidden words file not found: {forbiddenWordsFile}");
+
+            this.ignoredSymbols = ignoredSymbols != null ? 
+                new HashSet<char>(ignoredSymbols) : 
+                new HashSet<char>(DefaultIgnoredSymbols);
 
             forbiddenWords = new List<string>();
             var normalizedToOriginal = new Dictionary<string, string>();
@@ -41,7 +156,7 @@ namespace ForwordLib
                 string word = line?.Trim() ?? "";
                 if (!string.IsNullOrEmpty(word))
                 {
-                    string normalized = NormalizeText(word);
+                    string normalized = NormalizeWord(word);
                     if (normalizedToOriginal.TryGetValue(normalized, out string? existingWord))
                     {
                         Console.Error.WriteLine($"Warning: '{word}' is equivalent to existing word " +
@@ -69,7 +184,7 @@ namespace ForwordLib
         {
             foreach (var word in forbiddenWords)
             {
-                var normalized = NormalizeText(word);
+                var normalized = NormalizeWord(word);
                 var node = root;
                 foreach (var ch in normalized)
                 {
@@ -124,63 +239,12 @@ namespace ForwordLib
             }
         }
 
-        private string NormalizeText(string text)
-        {
-            var normalized = new StringBuilder();
-            foreach (var c in text)
-            {
-                char ch = c;
-                
-                // Convert to lowercase
-                if (char.IsUpper(ch))
-                    ch = char.ToLower(ch);
-                
-                // Map accented characters
-                switch (ch)
-                {
-                    case 'à':
-                    case 'á':
-                    case 'ä':
-                    case 'â': ch = 'a'; break;
-                    case 'è':
-                    case 'é':
-                    case 'ë':
-                    case 'ê': ch = 'e'; break;
-                    case 'ì':
-                    case 'í':
-                    case 'ï':
-                    case 'î': ch = 'i'; break;
-                    case 'ò':
-                    case 'ó':
-                    case 'ö':
-                    case 'ô': ch = 'o'; break;
-                    case 'ù':
-                    case 'ú':
-                    case 'ü':
-                    case 'û': ch = 'u'; break;
-                    case 'ñ': ch = 'n'; break;
-                    case 'ß':
-                        normalized.Append("ss");
-                        continue;
-                }
-                
-                // Skip combining diacritical marks
-                if (ch >= '\u0300' && ch <= '\u036F')
-                    continue;
-                
-                if (!char.IsWhiteSpace(ch) && IsWordChar(ch))
-                    normalized.Append(ch);
-            }
-            
-            return normalized.ToString();
-        }
-
         public bool Search(string text)
         {
             if (string.IsNullOrEmpty(text))
                 return false;
 
-            var normalizedText = NormalizeText(text);
+            var normalizedText = NormalizeForSearch(text);
             TrieNode? current = root;
 
             foreach (var ch in normalizedText)
@@ -215,7 +279,7 @@ namespace ForwordLib
             if (string.IsNullOrEmpty(text))
                 return text;
 
-            var normalizedText = NormalizeText(text);
+            var normalizedText = NormalizeForSearch(text);
             var result = text;
             TrieNode? current = root;
             var matches = new List<(int start, int end)>();
@@ -264,7 +328,7 @@ namespace ForwordLib
 
                 foreach (var word in current.Output)
                 {
-                    var normalizedWord = NormalizeText(word);
+                    var normalizedWord = NormalizeWord(word);
                     var wordPos = pos - normalizedWord.Length + 1;
                     
                     if (wordPos <= pos && 
