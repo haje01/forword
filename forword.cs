@@ -229,5 +229,34 @@ namespace ForwordLib
 
             return result;
         }
+
+        private bool IsWordChar(char ch)
+        {
+            // Basic Latin letters and numbers
+            if (char.IsLetterOrDigit(ch)) return true;
+            
+            int code = (int)ch;
+            
+            // Hangul ranges
+            if (code >= 0xAC00 && code <= 0xD7AF) return true;  // Syllables
+            if (code >= 0x1100 && code <= 0x11FF) return true;  // Jamo
+            if (code >= 0x3130 && code <= 0x318F) return true;  // Compatibility Jamo
+            
+            // CJK Unified Ideographs
+            if (code >= 0x4E00 && code <= 0x9FFF) return true;
+            
+            // Japanese
+            if (code >= 0x3040 && code <= 0x309F) return true;  // Hiragana
+            if (code >= 0x30A0 && code <= 0x30FF) return true;  // Katakana
+            
+            // Russian (Cyrillic)
+            if (code >= 0x0400 && code <= 0x04FF) return true;
+            
+            // Spanish/Italian
+            if (code >= 0x1E00 && code <= 0x1EFF) return true;  // Latin Extended Additional
+            if (code >= 0x0100 && code <= 0x017F) return true;  // Latin Extended-A
+            
+            return false;
+        }
     }
 } 

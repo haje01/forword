@@ -16,6 +16,7 @@
 #include <map>
 
 class Forword {
+friend class NormalizeUtf8Test;
 private:
     struct TrieNode {
         std::unordered_map<char32_t, std::unique_ptr<TrieNode>> children;
@@ -40,6 +41,59 @@ private:
         return conv.to_bytes(s);
     }
 
+    // Normalize UTF-8 string with expansion and return mapping vector.
+    // For each code point appended to the normalized output, mapping[i] holds
+    // the index in the original UTF-32 string where that character came from.
+    static std::pair<std::string, std::vector<size_t>> normalize_utf8_with_mapping(const std::string & input) {
+        std::u32string utf32 = to_utf32(input);
+        std::u32string normalized;
+        normalized.reserve(utf32.size());
+        std::vector<size_t> mapping;
+        mapping.reserve(utf32.size());
+        
+        for (size_t i = 0; i < utf32.size(); i++) {
+            char32_t ch = utf32[i];
+            
+            // Convert to lowercase first
+            if (ch >= U'A' && ch <= U'Z') {
+                ch = ch - U'A' + U'a';
+            }
+            
+            // Map accented characters to their base form
+            switch(ch) {
+                case U'à': ch = U'a'; break;
+                case U'á': ch = U'a'; break;
+                case U'ä': ch = U'a'; break;  // German umlaut
+                case U'è': ch = U'e'; break;
+                case U'é': ch = U'e'; break;
+                case U'ì': ch = U'i'; break;
+                case U'í': ch = U'i'; break;
+                case U'ò': ch = U'o'; break;
+                case U'ó': ch = U'o'; break;
+                case U'ö': ch = U'o'; break;  // German umlaut
+                case U'ù': ch = U'u'; break;
+                case U'ú': ch = U'u'; break;
+                case U'ü': ch = U'u'; break;  // German umlaut
+                case U'ñ': ch = U'n'; break;  // Spanish 'ñ' -> 'n'
+                // For ß, expand to two 's' characters.
+                case U'ß': {
+                    normalized.push_back(U's');
+                    mapping.push_back(i);
+                    normalized.push_back(U's');
+                    mapping.push_back(i);
+                    continue;
+                }
+                default:
+                    if(ch >= 0x0300 && ch <= 0x036F) continue;
+            }
+            
+            normalized.push_back(ch);
+            mapping.push_back(i);
+        }
+        
+        return { to_utf8(normalized), mapping };
+    }
+
     std::vector<std::u32string> load_forbidden_words(const std::string& file_path) {
         std::vector<std::u32string> words;
         std::ifstream file(file_path);
@@ -55,7 +109,12 @@ private:
             line.erase(line.find_last_not_of(" \t\n\r") + 1);
             
             if (!line.empty()) {  // Skip empty lines after trimming
-                words.push_back(to_utf32(line));
+                // First normalize UTF-8 string to handle accents
+                auto normalized_utf8 = Forword::normalize_utf8(line);
+                // Then convert to UTF-32 and normalize spaces/symbols
+                auto utf32_word = to_utf32(normalized_utf8);
+                auto normalized_word = normalize_text(utf32_word);
+                words.push_back(normalized_word);
             }
         }
 
@@ -67,16 +126,14 @@ private:
         root->is_root = true;
 
         for (const auto& word : forbidden_words) {
-            // Normalize the forbidden word for consistency with search/replace normalization.
-            std::u32string norm_word = normalize_text(word);
             auto node = root.get();
-            for (char32_t ch : norm_word) {
+            for (char32_t ch : word) {
                 if (!node->children[ch]) {
                     node->children[ch] = std::make_unique<TrieNode>();
                 }
                 node = node->children[ch].get();
             }
-            node->output.push_back(norm_word);
+            node->output.push_back(word);
         }
     }
 
@@ -121,6 +178,12 @@ private:
         // Basic Latin letters and numbers
         if (std::isalnum(ch)) return true;
         
+        // Latin-1 Supplement letters (e.g., accented letters like á, é, etc.)
+        if (ch >= 0x00C0 && ch <= 0x00FF) return true;
+        
+        // Skip combining diacritical marks
+        if (ch >= 0x0300 && ch <= 0x036F) return false;
+        
         // Hangul Syllables (AC00-D7AF)
         if (ch >= 0xAC00 && ch <= 0xD7AF) return true;
         
@@ -129,6 +192,24 @@ private:
         
         // Hangul Compatibility Jamo (3130-318F)
         if (ch >= 0x3130 && ch <= 0x318F) return true;
+        
+        // CJK Unified Ideographs (4E00-9FFF)
+        if (ch >= 0x4E00 && ch <= 0x9FFF) return true;
+        
+        // Hiragana (3040-309F)
+        if (ch >= 0x3040 && ch <= 0x309F) return true;
+        
+        // Katakana (30A0-30FF)
+        if (ch >= 0x30A0 && ch <= 0x30FF) return true;
+        
+        // Cyrillic (0400-04FF)
+        if (ch >= 0x0400 && ch <= 0x04FF) return true;
+        
+        // Latin Extended Additional (1E00-1EFF) - for Spanish/Italian
+        if (ch >= 0x1E00 && ch <= 0x1EFF) return true;
+        
+        // Latin Extended-A (0100-017F) - for Spanish/Italian
+        if (ch >= 0x0100 && ch <= 0x017F) return true;
         
         return false;
     }
@@ -142,6 +223,16 @@ private:
         result.reserve(text.size());
         
         for (char32_t ch : text) {
+            // Convert to lowercase first
+            if (ch >= U'A' && ch <= U'Z') {
+                ch = ch - U'A' + U'a';
+            }
+            
+            // Skip combining diacritical marks (0300-036F)
+            if (ch >= 0x0300 && ch <= 0x036F) {
+                continue;
+            }
+            
             if (!is_space_char(ch) && is_word_char(ch)) {
                 result.push_back(ch);
             }
@@ -161,8 +252,18 @@ public:
     bool search(const std::string& text) const {
         if (text.empty()) return false;
 
-        auto utf32_text = to_utf32(text);
-        auto normalized_text = normalize_text(utf32_text);
+        // Use normalize_utf8_with_mapping to obtain normalized text and mapping vector.
+        auto [normalized_input, mapping] = normalize_utf8_with_mapping(text);
+        auto utf32_text = to_utf32(normalized_input);
+        // Build filtered mapping for normalized_text (filtering out spaces/punctuation)
+        std::u32string normalized_text;
+        std::vector<size_t> norm_to_orig;
+        for (size_t i = 0; i < utf32_text.size(); i++) {
+            if (!is_space_char(utf32_text[i]) && is_word_char(utf32_text[i])) {
+                normalized_text.push_back(utf32_text[i]);
+                norm_to_orig.push_back(mapping[i]);
+            }
+        }
         const TrieNode* current = root.get();
 
         for (size_t i = 0; i < normalized_text.size(); i++) {
@@ -172,9 +273,17 @@ public:
             }
             if (current->children.count(ch)) {
                 current = current->children.at(ch).get();
-            }
-            if (!current->output.empty()) {
-                return true;
+                for (const auto& word : current->output) {
+                    std::u32string normalized_word = normalize_text(word);
+                    size_t word_pos = i - normalized_word.length() + 1;
+                    
+                    if (word_pos <= i && 
+                        normalized_text.substr(word_pos, normalized_word.length()) == normalized_word) {
+                        if (word_pos < norm_to_orig.size() && i < norm_to_orig.size()) {
+                            return true;
+                        }
+                    }
+                }
             }
         }
 
@@ -186,23 +295,22 @@ public:
             return text;
         }
 
-        auto utf32_text = to_utf32(text);
-        auto normalized_text = normalize_text(utf32_text);
+        // Use normalize_utf8_with_mapping to obtain normalized text and mapping vector.
+        auto [normalized_input, mapping] = normalize_utf8_with_mapping(text);
+        auto utf32_text = to_utf32(normalized_input);
+        // Build filtered mapping for normalized_text (only for word chars)
+        std::u32string normalized_text;
+        std::vector<size_t> norm_to_orig;
+        for (size_t i = 0; i < utf32_text.size(); i++) {
+            if (!is_space_char(utf32_text[i]) && is_word_char(utf32_text[i])) {
+                normalized_text.push_back(utf32_text[i]);
+                norm_to_orig.push_back(mapping[i]);
+            }
+        }
+        auto original_utf32 = to_utf32(text);  // Original text (unchanged)
         const TrieNode* current = root.get();
         std::set<std::pair<size_t, size_t>> matches;
         size_t pos = 0;
-
-        // Build mapping between normalized and original text positions
-        std::map<size_t, size_t> norm_to_orig;
-        size_t norm_pos = 0;
-
-        // First pass: find word boundaries and build position mappings
-        for (size_t i = 0; i < utf32_text.length(); ++i) {
-            if (is_word_char(utf32_text[i])) {
-                norm_to_orig[norm_pos] = i;
-                norm_pos++;
-            }
-        }
 
         // Find all matches
         while (pos < normalized_text.length()) {
@@ -219,17 +327,17 @@ public:
                     std::u32string normalized_word = normalize_text(word);
                     size_t word_pos = pos - normalized_word.length() + 1;
                     
-                    if (word_pos <= pos && 
+                    if (word_pos <= pos &&
                         normalized_text.substr(word_pos, normalized_word.length()) == normalized_word) {
-                        if (norm_to_orig.count(word_pos) && norm_to_orig.count(pos)) {
+                        if (word_pos < norm_to_orig.size() && pos < norm_to_orig.size()) {
                             size_t orig_start = norm_to_orig[word_pos];
                             size_t orig_end = norm_to_orig[pos];
 
                             // Extend boundaries to include adjacent spaces
-                            while (orig_start > 0 && std::isspace(utf32_text[orig_start - 1])) {
+                            while (orig_start > 0 && is_space_char(original_utf32[orig_start - 1])) {
                                 orig_start--;
                             }
-                            while (orig_end < utf32_text.length() - 1 && std::isspace(utf32_text[orig_end + 1])) {
+                            while (orig_end < original_utf32.length() - 1 && is_space_char(original_utf32[orig_end + 1])) {
                                 orig_end++;
                             }
 
@@ -241,26 +349,50 @@ public:
             pos++;
         }
 
-        // Replace matches from end to start
-        for (auto it = matches.rbegin(); it != matches.rend(); ++it) {
-            size_t start = it->first;
-            size_t end = it->second;
+        // Filter overlapping matches: remove any match that is completely contained
+        // in another match with greater length.
+        std::vector<std::pair<size_t, size_t>> filtered;
+        for (const auto& m : matches) {
+            bool contained = false;
+            for (const auto& n : matches) {
+                if (m != n && n.first <= m.first && n.second >= m.second &&
+                    ((n.second - n.first) > (m.second - m.first))) {
+                    contained = true;
+                    break;
+                }
+            }
+            if (!contained)
+                filtered.push_back(m);
+        }
+
+        // Sort filtered intervals in descending order of start index to safely replace from end to start.
+        std::sort(filtered.begin(), filtered.end(), [](auto a, auto b) { return a.first > b.first; });
+        
+        // Replace filtered matches from end to start.
+        for (const auto& m : filtered) {
+            size_t start = m.first;
+            size_t end = m.second;
             
-            std::u32string prefix = utf32_text.substr(0, start);
-            std::u32string suffix = end < utf32_text.length() ? utf32_text.substr(end) : U"";
+            std::u32string prefix = original_utf32.substr(0, start);
+            std::u32string suffix = end < original_utf32.length() ? original_utf32.substr(end) : U"";
             
             // Ensure single space before and after replacement
-            if (!prefix.empty() && !std::isspace(prefix.back())) {
+            if (!prefix.empty() && !is_space_char(prefix.back())) {
                 prefix += U" ";
             }
-            if (!suffix.empty() && !std::isspace(suffix.front())) {
+            if (!suffix.empty() && !is_space_char(suffix.front())) {
                 suffix = U" " + suffix;
             }
             
-            utf32_text = prefix + to_utf32(replacement) + suffix;
+            original_utf32 = prefix + to_utf32(replacement) + suffix;
         }
 
-        return to_utf8(utf32_text);
+        return to_utf8(original_utf32);
+    }
+
+    // Wrapper for normalize_utf8_with_mapping that returns only the normalized UTF-8 string.
+    static std::string normalize_utf8(const std::string & input) {
+        return std::get<0>(normalize_utf8_with_mapping(input));
     }
 };
 

@@ -98,5 +98,52 @@ class TestForword(unittest.TestCase):
             "이것은 *** 입니다"
         )
 
+    def test_multilingual_support(self):
+        """Test support for various languages"""
+        # Create temporary file with multilingual forbidden words
+        with open(self.forbidden_words_file, "w", encoding="utf-8") as f:
+            f.write("坏话\n")      # Chinese
+            f.write("ばか\n")      # Japanese
+            f.write("плохой\n")    # Russian
+            f.write("málaga\n")    # Spanish
+            f.write("cattività\n")  # Italian
+        
+        forword = Forword(self.forbidden_words_file)
+        
+        # Test Chinese
+        self.assertTrue(forword.search("这是一个坏话的例子"))
+        self.assertEqual(
+            forword.replace("这是一个坏话的例子"),
+            "这是一个 *** 的例子"
+        )
+        
+        # Test Japanese
+        self.assertTrue(forword.search("これはばかな例です"))
+        self.assertEqual(
+            forword.replace("これはばかな例です"),
+            "これは *** な例です"
+        )
+        
+        # Test Russian
+        self.assertTrue(forword.search("это плохой пример"))
+        self.assertEqual(
+            forword.replace("это плохой пример"),
+            "это *** пример"
+        )
+        
+        # Test Spanish
+        self.assertTrue(forword.search("es un ejemplo de málaga"))
+        self.assertEqual(
+            forword.replace("es un ejemplo de málaga"),
+            "es un ejemplo de ***"
+        )
+        
+        # Test Italian
+        self.assertTrue(forword.search("un esempio di cattività"))
+        self.assertEqual(
+            forword.replace("un esempio di cattività"),
+            "un esempio di ***"
+        )
+
 if __name__ == '__main__':
     unittest.main() 

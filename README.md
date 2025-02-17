@@ -8,10 +8,11 @@ A simple library for quickly searching forbidden words in text messages
 <a name="english"></a>
 ## English
 
-### Introduction
-forword is a simple library for quickly searching forbidden words in text messages. It reads forbidden words from a .csv file and quickly finds them in given text messages. The library is available for various programming languages.
+## Introduction
+forword is a library for quickly detecting and replacing forbidden words in text messages.
+It reads forbidden words from a text file and efficiently searches for them in given text messages. The library is provided in multiple programming language implementations.
 
-### Key Features
+### Main Features
 - Loading text files containing forbidden words
 - Fast search of forbidden words in given text
 - Search capability even when forbidden words contain spaces or symbols
@@ -19,12 +20,30 @@ forword is a simple library for quickly searching forbidden words in text messag
 - Multi-language support (UTF-8)
 
 ### Supported Languages
+
+The following languages are supported. For all supported languages, accented characters are normalized to their base form and the search is case-insensitive.
+
+- **Latin-based:**
+  - English
+  - Spanish: ñ → n
+  - Italian: à, è, é, etc.
+  - German: ä → a, ö → o, ü → u, ß → ss
+
+- **Asian Languages:**
+  - Korean: Hangul syllables and Jamo
+  - Japanese: Hiragana and Katakana
+  - Chinese: CJK Unified Ideographs
+
+- **Others:**
+  - Russian: Cyrillic characters
+
+### Supported Programming Languages
 - C++ (11 or higher)
 - C# (.NET Standard 2.0 or higher)
-- Python (3.7 or higher)
+- Python (3.7 이상)
 
 ### Installation
-The library is provided as a single source code file (header-only library for C++), making it easy to add to your project.
+The library is provided as a single source code file (header-only library for C++), making it easy to integrate into your project.
 
 Add the appropriate file for your programming language to your project from the following directory structure:
 
@@ -35,19 +54,19 @@ forword/
 └── forword.py
 ```
 
-### Example Code
+## Example Usage
 
-Assuming we have a forbidden words text file like this:
+Given a forbidden words text file like this:
 
 `forbidden_words.txt`
 ```
-stupid
-idiot
+bad
+badword
 ```
 
-Here are example codes for each programming language:
+Here are examples for each programming language:
 
-#### C++
+### C++
 ```cpp
 #include "forword.h"
 
@@ -55,17 +74,17 @@ int main() {
     // Path to forbidden words file
     const char* forbidden_words_file = "forbidden_words.txt";
 
-    // Create forbidden word search object
+    // Create forword instance
     Forword forword(forbidden_words_file);
 
     // Text to search
-    const char* text = "This message contains forbidden words.";
+    const char* text = "This message contains a bad word.";
 
     // Search for forbidden words
     bool is_forbidden = forword.search(text);
 
-    // Print results
-    printf("Forbidden word search result: %s\n", is_forbidden ? "Found" : "Not found");
+    // Print result
+    printf("Search result: %s\n", is_forbidden ? "Found" : "Not found");
 
     // Replace forbidden words
     const char* replaced_text = forword.replace(text, "***");
@@ -75,7 +94,7 @@ int main() {
 }
 ```
 
-#### C#
+### C#
 ```csharp
 using Forword;
 
@@ -86,17 +105,17 @@ class Program
         // Path to forbidden words file
         const string forbidden_words_file = "forbidden_words.txt";
 
-        // Create forbidden word search object
+        // Create forword instance
         Forword forword = new Forword(forbidden_words_file);
 
         // Text to search
-        const string text = "This message contains forbidden words.";
+        const string text = "This message contains a bad word.";
 
         // Search for forbidden words
         bool is_forbidden = forword.Search(text);
 
-        // Print results
-        Console.WriteLine("Forbidden word search result: " + (is_forbidden ? "Found" : "Not found"));
+        // Print result
+        Console.WriteLine("Search result: " + (is_forbidden ? "Found" : "Not found"));
 
         // Replace forbidden words
         string replaced_text = forword.Replace(text, "***");
@@ -105,25 +124,25 @@ class Program
 }
 ```
 
-#### Python
+### Python
 ```python
 from forword import Forword
 
 forword = Forword("forbidden_words.txt")
 
-text = "This message contains forbidden words."
+text = "This message contains a bad word."
 
 is_forbidden = forword.search(text)
-print(f"Forbidden word search result: {'Found' if is_forbidden else 'Not found'}")
+print(f"Search result: {'Found' if is_forbidden else 'Not found'}")
 
 replaced_text = forword.replace(text, "***")
 print(f"Replaced text: {replaced_text}")
 ```
 
-### Important Notes
+## Important Notes
 - The forbidden words text file should contain one word per line.
-- There's no need to register new forbidden words by adding spaces or symbols to existing ones.
-- For frequent calls, it is recommended to initialize the Forword object once and reuse it.
+- There's no need to register variations of the same forbidden word with added spaces or symbols.
+- For frequent usage, it's recommended to initialize the Forword object once and reuse it.
 
 
 ## For Forword Developers
@@ -253,6 +272,27 @@ forword는 텍스트 메시지에서 금칙어를 빠르게 검색하기 위한 
 - 다국어 지원 (UTF-8)
 
 ### 지원 언어
+
+다음과 같은 언어와 문자를 지원합니다. 모든 지원 언어에 대해 악센트 문자는 기본 문자로 정규화되며, 대소문자를 구분하지 않습니다.
+
+- **라틴 계열:**
+  - 영어 (English)
+  - 스페인어 (Spanish): ñ → n
+  - 이탈리아어 (Italian): à, è, é 등
+  - 독일어 (German): ä → a, ö → o, ü → u, ß → ss
+
+- **아시아 언어:**
+  - 한국어: 한글 음절 및 자모
+  - 일본어: 히라가나, 가타카나
+  - 중국어: CJK 통합 한자
+
+- **기타:**
+  - 러시아어: 키릴 문자
+
+모든 지원 언어에 대해 악센트 문자는 기본 문자로 정규화되며, 대소문자를 구분하지 않습니다.
+
+
+### 지원 프로그래밍 언어
 - C++ (11 이상)
 - C# (.NET Standard 2.0 이상)
 - Python (3.7 이상)

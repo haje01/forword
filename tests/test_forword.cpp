@@ -86,6 +86,89 @@ TEST_F(ForwordTest, WordsWithWhitespace) {
     EXPECT_EQ(forword.replace("이것은 욕설 입니다"), "이것은 *** 입니다");
 }
 
+TEST_F(ForwordTest, MultilingualSupport) {
+    // Create forbidden words file with multilingual words
+    std::ofstream file(forbidden_words_file);
+    file << u8"坏话\n"      // Chinese
+         << u8"ばか\n"      // Japanese
+         << u8"плохой\n"    // Russian
+         << u8"málaga\n"    // Spanish
+         << u8"cattività\n" // Italian
+         << u8"scheiße\n";  // German
+    file.close();
+
+    Forword forword(forbidden_words_file);
+
+    // Test Chinese
+    EXPECT_TRUE(forword.search(u8"这是一个坏话的例子"));
+    EXPECT_EQ(forword.replace(u8"这是一个坏话的例子"), u8"这是一个 *** 的例子");
+
+    // Test Japanese
+    EXPECT_TRUE(forword.search(u8"これはばかな例です"));
+    EXPECT_EQ(forword.replace(u8"これはばかな例です"), u8"これは *** な例です");
+
+    // Test Russian
+    EXPECT_TRUE(forword.search(u8"это плохой пример"));
+    EXPECT_EQ(forword.replace(u8"это плохой пример"), u8"это *** пример");
+
+    // Test Spanish
+    EXPECT_TRUE(forword.search(u8"es un ejemplo de málaga"));
+    EXPECT_EQ(forword.replace(u8"es un ejemplo de málaga"), u8"es un ejemplo de ***");
+
+    // Test Italian
+    EXPECT_TRUE(forword.search(u8"un esempio di cattività"));
+    EXPECT_EQ(forword.replace(u8"un esempio di cattività"), u8"un esempio di ***");
+
+    // Test German
+    EXPECT_TRUE(forword.search(u8"das ist scheiße"));
+    EXPECT_EQ(forword.replace(u8"das ist scheiße"), u8"das ist ***");
+}
+
+class NormalizeUtf8Test : public ::testing::Test {
+protected:
+    static std::string normalize_utf8_test(const std::string& input) {
+        return Forword::normalize_utf8(input);
+    }
+};
+
+TEST_F(NormalizeUtf8Test, BasicNormalization) {
+    // Test basic ASCII
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("hello"), "hello");
+    
+    // Test Italian characters
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("cattività"), "cattivita");  // à -> a
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("perché"), "perche");        // é -> e
+    
+    // Test Spanish characters
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("málaga"), "malaga");        // á -> a
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("niño"), "nino");           // ñ -> n
+    
+    // Test multiple combining marks
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("a\u0300\u0301"), "a");     // a + combining grave + combining acute -> a
+    
+    // Test mixed normal and combining characters
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("e\u0301"), "e");           // e + combining acute -> e
+    
+    // Test German characters
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("schön"), "schon");     // ö -> o
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("über"), "uber");       // ü -> u
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("Mädchen"), "madchen"); // ä -> a
+    EXPECT_EQ(NormalizeUtf8Test::normalize_utf8_test("groß"), "gross");      // ß -> ss
+    
+    // Print hex values for debugging
+    std::string input = "cattività";
+    std::string normalized = NormalizeUtf8Test::normalize_utf8_test(input);
+    std::cout << "Input hex: ";
+    for (unsigned char c : input) {
+        printf("%02X ", c);
+    }
+    std::cout << "\nNormalized hex: ";
+    for (unsigned char c : normalized) {
+        printf("%02X ", c);
+    }
+    std::cout << std::endl;
+}
+
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

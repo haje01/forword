@@ -126,4 +126,54 @@ public class TestForword
             "이것은 *** 입니다"
         );
     }
+
+    [TestMethod]
+    public void TestMultilingualSupport()
+    {
+        // Create forbidden words file with multilingual words
+        File.WriteAllText(forbiddenWordsFile,
+            "坏话\n" +      // Chinese
+            "ばか\n" +      // Japanese
+            "плохой\n" +    // Russian
+            "málaga\n" +    // Spanish
+            "cattività\n",  // Italian
+            Encoding.UTF8);
+
+        var forword = new ForwordLib.Forword(forbiddenWordsFile);
+
+        // Test Chinese
+        Assert.IsTrue(forword.Search("这是一个坏话的例子"));
+        Assert.AreEqual(
+            forword.Replace("这是一个坏话的例子"),
+            "这是一个 *** 的例子"
+        );
+
+        // Test Japanese
+        Assert.IsTrue(forword.Search("これはばかな例です"));
+        Assert.AreEqual(
+            forword.Replace("これはばかな例です"),
+            "これは *** な例です"
+        );
+
+        // Test Russian
+        Assert.IsTrue(forword.Search("это плохой пример"));
+        Assert.AreEqual(
+            forword.Replace("это плохой пример"),
+            "это *** пример"
+        );
+
+        // Test Spanish
+        Assert.IsTrue(forword.Search("es un ejemplo de málaga"));
+        Assert.AreEqual(
+            forword.Replace("es un ejemplo de málaga"),
+            "es un ejemplo de ***"
+        );
+
+        // Test Italian
+        Assert.IsTrue(forword.Search("un esempio di cattività"));
+        Assert.AreEqual(
+            forword.Replace("un esempio di cattività"),
+            "un esempio di ***"
+        );
+    }
 } 

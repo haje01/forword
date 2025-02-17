@@ -68,9 +68,47 @@ class Forword:
                 child.fail = failure.children.get(char) if failure else self.root
                 child.output.update(child.fail.output)
 
+    def _is_word_char(self, ch: str) -> bool:
+        """Check if character is a word character in any supported language."""
+        code = ord(ch)
+        
+        # Basic Latin letters and numbers
+        if ch.isalnum():
+            return True
+            
+        # Hangul ranges
+        if 0xAC00 <= code <= 0xD7AF:  # Syllables
+            return True
+        if 0x1100 <= code <= 0x11FF:  # Jamo
+            return True
+        if 0x3130 <= code <= 0x318F:  # Compatibility Jamo
+            return True
+            
+        # CJK Unified Ideographs
+        if 0x4E00 <= code <= 0x9FFF:
+            return True
+            
+        # Japanese
+        if 0x3040 <= code <= 0x309F:  # Hiragana
+            return True
+        if 0x30A0 <= code <= 0x30FF:  # Katakana
+            return True
+            
+        # Russian (Cyrillic)
+        if 0x0400 <= code <= 0x04FF:
+            return True
+            
+        # Spanish/Italian
+        if 0x1E00 <= code <= 0x1EFF:  # Latin Extended Additional
+            return True
+        if 0x0100 <= code <= 0x017F:  # Latin Extended-A
+            return True
+            
+        return False
+
     def _normalize_text(self, text: str) -> str:
         """Remove spaces and symbols from text."""
-        return re.sub(r'[\s\W_]', '', text)
+        return ''.join(ch for ch in text if not ch.isspace() and self._is_word_char(ch))
 
     def search(self, text: str) -> bool:
         """
@@ -228,10 +266,6 @@ class Forword:
                     
                 child.fail = failure.children.get(char) if failure else self.root
                 child.output.update(child.fail.output)
-
-    def _normalize_text(self, text: str) -> str:
-        """Remove spaces and symbols from text."""
-        return re.sub(r'[\s\W_]', '', text)
 
     def search(self, text: str) -> bool:
         """
