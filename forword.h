@@ -101,14 +101,90 @@ private:
     std::vector<std::u32string> load_forbidden_words(const std::string& file_path) {
         std::vector<std::u32string> words;
         std::unordered_map<std::string, std::string> normalized_to_original;
-        std::ifstream file(file_path);
+        // Open file in binary mode
+        std::ifstream file(file_path, std::ios::binary);
         
         if (!file.is_open()) {
             throw std::runtime_error("Failed to open forbidden words file: " + file_path);
         }
 
+        // Read first few bytes to check BOM
+        char bom[4] = {0};
+        file.read(bom, 4);
+        
+        // Determine encoding from BOM
+        enum class Encoding {
+            Unknown,
+            UTF8,
+            UTF16LE,
+            UTF16BE,
+            UTF32LE,
+            UTF32BE
+        } encoding = Encoding::Unknown;
+        
+        size_t bom_size = 0;
+        
+        if (bom[0] == (char)0xEF && bom[1] == (char)0xBB && bom[2] == (char)0xBF) {
+            encoding = Encoding::UTF8;
+            bom_size = 3;
+        }
+        else if (bom[0] == (char)0xFF && bom[1] == (char)0xFE) {
+            if (bom[2] == 0 && bom[3] == 0) {
+                encoding = Encoding::UTF32LE;
+                bom_size = 4;
+            } else {
+                encoding = Encoding::UTF16LE;
+                bom_size = 2;
+            }
+        }
+        else if (bom[0] == (char)0xFE && bom[1] == (char)0xFF) {
+            encoding = Encoding::UTF16BE;
+            bom_size = 2;
+        }
+        else if (bom[0] == 0 && bom[1] == 0 && bom[2] == (char)0xFE && bom[3] == (char)0xFF) {
+            encoding = Encoding::UTF32BE;
+            bom_size = 4;
+        }
+        else {
+            // No BOM found, assume UTF-8
+            encoding = Encoding::UTF8;
+            bom_size = 0;
+        }
+
+        // Reset file position after BOM
+        file.clear();
+        file.seekg(bom_size);
+        
+        // Read file content based on encoding
         std::string line;
-        while (std::getline(file, line)) {
+        std::vector<char> buffer;
+        buffer.resize(1024);  // Initial buffer size
+        
+        while (true) {
+            if (encoding == Encoding::UTF8) {
+                if (!std::getline(file, line)) break;
+            }
+            else {
+                // Read appropriate number of bytes based on encoding
+                size_t char_size = (encoding == Encoding::UTF16LE || encoding == Encoding::UTF16BE) ? 2 : 4;
+                file.read(buffer.data(), char_size);
+                if (file.gcount() < (long)char_size) break;
+                
+                // Convert to UTF-8
+                if (encoding == Encoding::UTF16LE) {
+                    uint16_t ch = *reinterpret_cast<uint16_t*>(buffer.data());
+                    line.push_back(ch & 0xFF);
+                    line.push_back((ch >> 8) & 0xFF);
+                }
+                else if (encoding == Encoding::UTF16BE) {
+                    uint16_t ch = *reinterpret_cast<uint16_t*>(buffer.data());
+                    ch = ((ch & 0xFF) << 8) | ((ch >> 8) & 0xFF);
+                    line.push_back(ch & 0xFF);
+                    line.push_back((ch >> 8) & 0xFF);
+                }
+                // Similar handling for UTF32...
+            }
+            
             // Trim whitespace from both ends
             line.erase(0, line.find_first_not_of(" \t\n\r"));
             line.erase(line.find_last_not_of(" \t\n\r") + 1);

@@ -5,3 +5,4 @@ bench/bin/
 bench/obj/
 tests/bin/
 tests/obj/
+.vscode/
