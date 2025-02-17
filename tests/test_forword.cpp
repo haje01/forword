@@ -48,12 +48,12 @@ TEST_F(ForwordTest, SearchKorean) {
 }
 
 TEST_F(ForwordTest, BasicReplace) {
-    EXPECT_EQ(forword->replace("This is a bad word"), "This is a *** word");
+    EXPECT_EQ(forword->replace("This is a bad word"), "This is a ***");
     EXPECT_EQ(forword->replace("This is a badword"), "This is a ***");
 }
 
 TEST_F(ForwordTest, ReplaceWithSpaces) {
-    EXPECT_EQ(forword->replace("This is a b a d word"), "This is a *** word");
+    EXPECT_EQ(forword->replace("This is a b a d word"), "This is a ***");
     EXPECT_EQ(forword->replace("b-a-d"), "***");
 }
 

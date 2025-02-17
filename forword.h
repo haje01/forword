@@ -12,6 +12,8 @@
 #include <regex>
 #include <locale>
 #include <codecvt>
+#include <set>
+#include <map>
 
 class Forword {
 private:
@@ -61,14 +63,16 @@ private:
         root->is_root = true;
 
         for (const auto& word : forbidden_words) {
+            // Normalize the forbidden word for consistency with search/replace normalization.
+            std::u32string norm_word = normalize_text(word);
             auto node = root.get();
-            for (char32_t ch : word) {
+            for (char32_t ch : norm_word) {
                 if (!node->children[ch]) {
                     node->children[ch] = std::make_unique<TrieNode>();
                 }
                 node = node->children[ch].get();
             }
-            node->output.push_back(word);
+            node->output.push_back(norm_word);
         }
     }
 
@@ -109,12 +113,32 @@ private:
         }
     }
 
+    bool is_word_char(char32_t ch) const {
+        // Basic Latin letters and numbers
+        if (std::isalnum(ch)) return true;
+        
+        // Hangul Syllables (AC00-D7AF)
+        if (ch >= 0xAC00 && ch <= 0xD7AF) return true;
+        
+        // Hangul Jamo (1100-11FF)
+        if (ch >= 0x1100 && ch <= 0x11FF) return true;
+        
+        // Hangul Compatibility Jamo (3130-318F)
+        if (ch >= 0x3130 && ch <= 0x318F) return true;
+        
+        return false;
+    }
+
+    bool is_space_char(char32_t ch) const {
+        return ch == U' ' || ch == U'\t' || ch == U'\n' || ch == U'\r';
+    }
+
     std::u32string normalize_text(const std::u32string& text) const {
         std::u32string result;
         result.reserve(text.size());
         
         for (char32_t ch : text) {
-            if (!std::isspace(ch) && std::isalnum(ch)) {
+            if (!is_space_char(ch) && is_word_char(ch)) {
                 result.push_back(ch);
             }
         }
@@ -124,6 +148,7 @@ private:
 
 public:
     explicit Forword(const std::string& forbidden_words_file) {
+        std::locale::global(std::locale("")); // Use system locale for correct UTF-8 conversion
         forbidden_words = load_forbidden_words(forbidden_words_file);
         build_trie();
         build_failure_links();
@@ -134,35 +159,49 @@ public:
 
         auto utf32_text = to_utf32(text);
         auto normalized_text = normalize_text(utf32_text);
-        
-        auto current = root.get();
-        
-        for (char32_t ch : normalized_text) {
+        const TrieNode* current = root.get();
+
+        for (size_t i = 0; i < normalized_text.size(); i++) {
+            char32_t ch = normalized_text[i];
             while (current != root.get() && !current->children.count(ch)) {
                 current = current->fail;
             }
-            
             if (current->children.count(ch)) {
                 current = current->children.at(ch).get();
-                if (!current->output.empty()) {
-                    return true;
-                }
+            }
+            if (!current->output.empty()) {
+                return true;
             }
         }
-        
+
         return false;
     }
 
     std::string replace(const std::string& text, const std::string& replacement = "***") const {
-        if (text.empty()) return text;
+        if (text.empty()) {
+            return text;
+        }
 
         auto utf32_text = to_utf32(text);
         auto normalized_text = normalize_text(utf32_text);
-        
-        std::vector<std::pair<size_t, size_t>> matches;
-        auto current = root.get();
-        
-        for (size_t pos = 0; pos < normalized_text.size(); ++pos) {
+        const TrieNode* current = root.get();
+        std::set<std::pair<size_t, size_t>> matches;
+        size_t pos = 0;
+
+        // Build mapping between normalized and original text positions
+        std::map<size_t, size_t> norm_to_orig;
+        size_t norm_pos = 0;
+
+        // First pass: find word boundaries and build position mappings
+        for (size_t i = 0; i < utf32_text.length(); ++i) {
+            if (is_word_char(utf32_text[i])) {
+                norm_to_orig[norm_pos] = i;
+                norm_pos++;
+            }
+        }
+
+        // Find all matches
+        while (pos < normalized_text.length()) {
             char32_t ch = normalized_text[pos];
             
             while (current != root.get() && !current->children.count(ch)) {
@@ -173,35 +212,51 @@ public:
                 current = current->children.at(ch).get();
                 
                 for (const auto& word : current->output) {
-                    size_t word_pos = pos - word.size() + 1;
-                    if (normalized_text.substr(word_pos, word.size()) == word) {
-                        matches.emplace_back(word_pos, pos + 1);
+                    std::u32string normalized_word = normalize_text(word);
+                    size_t word_pos = pos - normalized_word.length() + 1;
+                    
+                    if (word_pos <= pos && 
+                        normalized_text.substr(word_pos, normalized_word.length()) == normalized_word) {
+                        if (norm_to_orig.count(word_pos) && norm_to_orig.count(pos)) {
+                            size_t orig_start = norm_to_orig[word_pos];
+                            size_t orig_end = norm_to_orig[pos];
+
+                            // Extend boundaries to include adjacent spaces
+                            while (orig_start > 0 && std::isspace(utf32_text[orig_start - 1])) {
+                                orig_start--;
+                            }
+                            while (orig_end < utf32_text.length() - 1 && std::isspace(utf32_text[orig_end + 1])) {
+                                orig_end++;
+                            }
+
+                            matches.insert({orig_start, orig_end + 1});
+                        }
                     }
                 }
             }
+            pos++;
         }
 
-        // Sort matches in reverse order to maintain correct positions
-        std::sort(matches.begin(), matches.end(), 
-            [](const auto& a, const auto& b) { return a.first > b.first; });
-
-        auto result = utf32_text;
-        for (const auto& match : matches) {
-            size_t orig_start = match.first;
-            size_t orig_end = match.second;
+        // Replace matches from end to start
+        for (auto it = matches.rbegin(); it != matches.rend(); ++it) {
+            size_t start = it->first;
+            size_t end = it->second;
             
-            // Extend match boundaries to include spaces
-            while (orig_start > 0 && std::isspace(result[orig_start-1])) {
-                --orig_start;
+            std::u32string prefix = utf32_text.substr(0, start);
+            std::u32string suffix = end < utf32_text.length() ? utf32_text.substr(end) : U"";
+            
+            // Ensure single space before and after replacement
+            if (!prefix.empty() && !std::isspace(prefix.back())) {
+                prefix += U" ";
             }
-            while (orig_end < result.size() && std::isspace(result[orig_end])) {
-                ++orig_end;
+            if (!suffix.empty() && !std::isspace(suffix.front())) {
+                suffix = U" " + suffix;
             }
             
-            result.replace(orig_start, orig_end - orig_start, to_utf32(replacement));
+            utf32_text = prefix + to_utf32(replacement) + suffix;
         }
-        
-        return to_utf8(result);
+
+        return to_utf8(utf32_text);
     }
 };
 

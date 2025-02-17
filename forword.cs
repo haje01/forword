@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Forword
+namespace ForwordLib
 {
     public class Forword
     {
@@ -142,58 +142,91 @@ namespace Forword
             if (string.IsNullOrEmpty(text))
                 return text;
 
+            var result = text;
             var normalizedText = NormalizeText(text);
-            var matches = new List<(int Start, int End)>();
             var current = root;
+            var matches = new SortedSet<(int start, int end)>();
+            var pos = 0;
 
-            for (int pos = 0; pos < normalizedText.Length; pos++)
+            // Build mapping between normalized and original text positions
+            var normToOrig = new Dictionary<int, int>();
+            var normPos = 0;
+
+            // First pass: find word boundaries and build position mappings
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (char.IsLetterOrDigit(text[i]))
+                {
+                    normToOrig[normPos] = i;
+                    normPos++;
+                }
+            }
+
+            // Find all matches
+            while (pos < normalizedText.Length)
             {
                 var ch = normalizedText[pos];
-
+                
                 while (current != root && !current.Children.ContainsKey(ch))
                 {
                     current = current.Fail;
                 }
-
-                if (current.Children.TryGetValue(ch, out var next))
+                
+                if (current.Children.ContainsKey(ch))
                 {
-                    current = next;
-
+                    current = current.Children[ch];
+                    
                     foreach (var word in current.Output)
                     {
-                        var wordPos = pos - word.Length + 1;
-                        if (normalizedText.Substring(wordPos, word.Length) == NormalizeText(word))
+                        var normalizedWord = NormalizeText(word);
+                        var wordPos = pos - normalizedWord.Length + 1;
+                        
+                        if (wordPos <= pos && 
+                            normalizedText.Substring(wordPos, normalizedWord.Length) == normalizedWord)
                         {
-                            matches.Add((wordPos, pos + 1));
+                            if (normToOrig.ContainsKey(wordPos) && normToOrig.ContainsKey(pos))
+                            {
+                                var origStart = normToOrig[wordPos];
+                                var origEnd = normToOrig[pos];
+
+                                // Extend boundaries to include adjacent spaces
+                                while (origStart > 0 && char.IsWhiteSpace(text[origStart - 1]))
+                                {
+                                    origStart--;
+                                }
+                                while (origEnd < text.Length - 1 && char.IsWhiteSpace(text[origEnd + 1]))
+                                {
+                                    origEnd++;
+                                }
+
+                                matches.Add((origStart, origEnd + 1));
+                            }
                         }
                     }
                 }
+                pos++;
             }
 
-            // Sort matches in reverse order to maintain correct positions
-            matches.Sort((a, b) => b.Start.CompareTo(a.Start));
-
-            var result = new StringBuilder(text);
-            foreach (var (start, end) in matches)
+            // Replace matches from end to start
+            foreach (var (start, end) in matches.Reverse())
             {
-                var origStart = start;
-                var origEnd = end;
-
-                // Extend match boundaries to include spaces
-                while (origStart > 0 && char.IsWhiteSpace(text[origStart - 1]))
+                var prefix = result.Substring(0, start);
+                var suffix = end < result.Length ? result.Substring(end) : "";
+                
+                // Ensure single space before and after replacement
+                if (prefix.Length > 0 && !char.IsWhiteSpace(prefix[prefix.Length - 1]))
                 {
-                    origStart--;
+                    prefix += " ";
                 }
-                while (origEnd < text.Length && char.IsWhiteSpace(text[origEnd]))
+                if (suffix.Length > 0 && !char.IsWhiteSpace(suffix[0]))
                 {
-                    origEnd++;
+                    suffix = " " + suffix;
                 }
-
-                result.Remove(origStart, origEnd - origStart);
-                result.Insert(origStart, replacement);
+                
+                result = prefix + replacement + suffix;
             }
 
-            return result.ToString();
+            return result;
         }
     }
 } 

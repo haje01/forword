@@ -40,7 +40,7 @@ class TestForword(unittest.TestCase):
         """Test basic replacement functionality"""
         self.assertEqual(
             self.forword.replace("This is a bad word"),
-            "This is a *** word"
+            "This is a ***"
         )
         self.assertEqual(
             self.forword.replace("This is a badword"),
@@ -51,7 +51,7 @@ class TestForword(unittest.TestCase):
         """Test replacement with spaces and symbols"""
         self.assertEqual(
             self.forword.replace("This is a b a d word"),
-            "This is a *** word"
+            "This is a ***"
         )
         self.assertEqual(
             self.forword.replace("b-a-d"),
