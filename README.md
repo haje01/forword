@@ -404,15 +404,15 @@ cd bench
 dotnet run
 ```
 
-The benchmark runs under the following conditions:
-- Same forbidden words file (bad, badword, 나쁜말, 욕설)
-- Same input text ("이것은 나쁜말 입니다. This is a bad word. 여기에 욕설이 있습니다.")
-- 10,000 iterations
+벤치마크는 다음과 같은 조건에서 실행됩니다:
+- 동일한 금칙어 파일 (bad, badword, 나쁜말, 욕설)
+- 동일한 입력 텍스트 ("이것은 나쁜말 입니다. This is a bad word. 여기에 욕설이 있습니다.")
+- 10,000회 반복 실행
 
-The benchmark results include:
-- Total number of operations
-- Total elapsed time (seconds)
-- Throughput (operations/sec)
+벤치마크 결과는 다음 정보를 포함합니다:
+- 총 실행 횟수
+- 총 소요 시간 (초)
+- 초당 처리량 (operations/sec)
 
 ### 테스트 실행
 
