@@ -317,12 +317,13 @@ dotnet test tests/test_forword.csproj
    - 빈 입력 처리
    - 파일 로딩 실패 처리
 
-### Project Structure
+### 프로젝트 구조
 ```
 forword/
 ├── forword.h
 ├── forword.cs
 ├── forword.py
+├── sample_data/
 ├── bench/
 │   ├── bench_forword.cpp
 │   ├── bench_forword.cs
