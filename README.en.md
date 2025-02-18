@@ -2,11 +2,11 @@
 
 [한국어 문서](README.md)
 
-A simple library for quickly searching forbidden words in text messages
+A simple library for quickly searching forbidden words in text messages.
 
 ## Introduction
 forword is a simple library for quickly searching forbidden words in text messages.
-It reads forbidden words from a .csv file and quickly finds them in given text messages. It is provided as a library for various programming languages.
+It reads forbidden words from a .txt file and quickly finds them in given text messages. It is provided as a library for various programming languages.
 
 ### Key Features
 - Loading text files containing forbidden words
@@ -17,7 +17,7 @@ It reads forbidden words from a .csv file and quickly finds them in given text m
 
 ### Supported Languages
 
-The following languages and characters are supported. For all supported languages, accented characters are normalized to basic characters, and the search is case-insensitive.
+The following languages and characters are supported. For some supported languages, accented characters are normalized to basic characters, and the search is case-insensitive.
 
 - **Latin-based:**
   - English
@@ -36,10 +36,33 @@ The following languages and characters are supported. For all supported language
 - **Others:**
   - Russian: Cyrillic characters
 
+#### Why Normalize Accented Characters
+
+There are several key reasons why we normalize accented characters to basic characters for some languages:
+
+1. Prevent Filter Bypass
+- Prevent users from bypassing word filters using accented characters
+- Example: "bád", "bàd", "bâd" should all be recognized as "bad"
+
+2. Registration Convenience
+- Administrators don't need to register every accent variation of forbidden words
+- Example: Registering "café" will automatically detect "cafe", "café", "cafè", etc.
+
+3. Consistent Search
+- Treat words as identical regardless of their various accent representations
+- Example: French words "élève", "eleve", "ÉLÈVE" are all treated the same
+
+4. Performance Optimization
+- Normalizing to basic ASCII characters enables faster string comparison
+- Can also reduce memory usage
+
+For these reasons, Forword provides accent normalization as a core feature.
+
 ### Supported Programming Languages
 - C++ (11 or higher)
 - C# (.NET Standard 2.0 or higher)
 - Python (3.7 or higher)
+
 
 ### Installation
 Since it's provided as a single source code file (header-only library for C++), it's easy to add to your project.
