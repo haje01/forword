@@ -1,6 +1,6 @@
 # forword
 
-[한국어 문서](README.ko.md)
+[한국어 문서](README.md)
 
 A simple library for quickly searching forbidden words in text messages
 

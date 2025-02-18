@@ -1,6 +1,6 @@
 # forword
 
-[English Documentation](README.md)
+[English Documentation](README.en.md)
 
 주어진 텍스트 메시지에서 금칙어를 빠르게 찾아주는 간단한 라이브러리.
 
