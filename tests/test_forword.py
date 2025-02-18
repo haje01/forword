@@ -104,6 +104,18 @@ class TestForword(unittest.TestCase):
         """Test support for various languages"""
         # Create temporary file with multilingual forbidden words
         with open(self.forbidden_words_file, "w", encoding="utf-8") as f:
+            # French
+            f.write("français\n")   # French
+            f.write("garçon\n")     # boy
+            f.write("café\n")       # coffee
+            # Portuguese
+            f.write("coração\n")    # heart
+            f.write("não\n")        # no
+            f.write("ação\n")       # action
+            # Thai
+            f.write("สวัสดี\n")      # hello
+            f.write("ขอบคุณ\n")      # thank you
+            # Existing test words
             f.write("坏话\n")      # Chinese
             f.write("ばか\n")      # Japanese
             f.write("плохой\n")    # Russian
@@ -111,6 +123,32 @@ class TestForword(unittest.TestCase):
             f.write("cattività\n")  # Italian
         
         forword = Forword(self.forbidden_words_file)
+        
+        # Test French
+        self.assertTrue(forword.search("Je parle français"))
+        self.assertTrue(forword.search("Le garcon est la"))  # without ç
+        self.assertTrue(forword.search("Un café noir"))
+        self.assertEqual(
+            forword.replace("Je parle français bien"),
+            "Je parle *** bien"
+        )
+        
+        # Test Portuguese
+        self.assertTrue(forword.search("Meu coração"))
+        self.assertTrue(forword.search("Eu não sei"))
+        self.assertTrue(forword.search("Uma ação importante"))
+        self.assertEqual(
+            forword.replace("Meu coração bate"),
+            "Meu *** bate"
+        )
+        
+        # Test Thai
+        self.assertTrue(forword.search("พูดว่า สวัสดี ครับ"))
+        self.assertTrue(forword.search("พูด ขอบคุณ ครับ"))
+        self.assertEqual(
+            forword.replace("พูดว่า สวัสดี ครับ"),
+            "พูดว่า *** ครับ"
+        )
         
         # Test Chinese
         self.assertTrue(forword.search("这是一个坏话的例子"))

@@ -63,21 +63,22 @@ private:
                 ch = ch - U'A' + U'a';
             }
             
-            // Map accented characters to their base form
+            // Map accented characters
             switch(ch) {
-                case U'à': ch = U'a'; break;
-                case U'á': ch = U'a'; break;
-                case U'ä': ch = U'a'; break;  // German umlaut
-                case U'è': ch = U'e'; break;
-                case U'é': ch = U'e'; break;
-                case U'ì': ch = U'i'; break;
-                case U'í': ch = U'i'; break;
-                case U'ò': ch = U'o'; break;
-                case U'ó': ch = U'o'; break;
-                case U'ö': ch = U'o'; break;  // German umlaut
-                case U'ù': ch = U'u'; break;
-                case U'ú': ch = U'u'; break;
-                case U'ü': ch = U'u'; break;  // German umlaut
+                // Unified accent mapping for all languages
+                // a with accents (French, Portuguese, German)
+                case U'à': case U'á': case U'â': case U'ã': case U'ä': ch = U'a'; break;
+                // e with accents (French, Portuguese)
+                case U'è': case U'é': case U'ê': case U'ë': ch = U'e'; break;
+                // i with accents (French, Portuguese)
+                case U'ì': case U'í': case U'î': case U'ï': ch = U'i'; break;
+                // o with accents (French, Portuguese)
+                case U'ò': case U'ó': case U'ô': case U'õ': case U'ö': ch = U'o'; break;
+                // u with accents (French, Portuguese, German)
+                case U'ù': case U'ú': case U'û': case U'ü': ch = U'u'; break;
+                // Other special characters
+                case U'ÿ': ch = U'y'; break;  // French
+                case U'ç': ch = U'c'; break;  // French, Portuguese
                 case U'ñ': ch = U'n'; break;  // Spanish 'ñ' -> 'n'
                 // For ß, expand to two 's' characters.
                 case U'ß': {
@@ -292,6 +293,9 @@ private:
         
         // Skip combining diacritical marks
         if (ch >= 0x0300 && ch <= 0x036F) return false;
+        
+        // Thai characters (0E00-0E7F)
+        if (ch >= 0x0E00 && ch <= 0x0E7F) return true;
         
         // Hangul Syllables (AC00-D7AF)
         if (ch >= 0xAC00 && ch <= 0xD7AF) return true;

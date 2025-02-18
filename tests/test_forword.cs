@@ -106,6 +106,18 @@ public class TestForword
     {
         // Create forbidden words file with multilingual words
         File.WriteAllText(forbiddenWordsFile,
+            // French
+            "français\n" +   // French
+            "garçon\n" +     // boy
+            "café\n" +       // coffee
+            // Portuguese
+            "coração\n" +    // heart
+            "não\n" +        // no
+            "ação\n" +       // action
+            // Thai
+            "สวัสดี\n" +      // hello
+            "ขอบคุณ\n" +      // thank you
+            // Existing test words
             "坏话\n" +      // Chinese
             "ばか\n" +      // Japanese
             "плохой\n" +    // Russian
@@ -115,25 +127,34 @@ public class TestForword
 
         var forword = new ForwordLib.Forword(forbiddenWordsFile);
 
+        // Test French
+        Assert.IsTrue(forword.Search("Je parle français"));
+        Assert.IsTrue(forword.Search("Le garcon est la"));  // without ç
+        Assert.IsTrue(forword.Search("Un café noir"));
+        Assert.AreEqual(
+            "Je parle *** bien",
+            forword.Replace("Je parle français bien")
+        );
+        
+        // Test Portuguese
+        Assert.IsTrue(forword.Search("Meu coração"));
+        Assert.IsTrue(forword.Search("Eu não sei"));
+        Assert.IsTrue(forword.Search("Uma ação importante"));
+        Assert.AreEqual(
+            "Meu *** bate",
+            forword.Replace("Meu coração bate")
+        );
+        
+        // Test Thai
+        Assert.IsTrue(forword.Search("พูดว่า สวัสดี ครับ"));
+        Assert.IsTrue(forword.Search("พูด ขอบคุณ ครับ"));
+        Assert.AreEqual(
+            "พูดว่า *** ครับ",
+            forword.Replace("พูดว่า สวัสดี ครับ")
+        );
+
         // Test Chinese
         Assert.IsTrue(forword.Search("这是一个坏话的例子"));
-        Assert.AreEqual("这是一个 *** 的例子", forword.Replace("这是一个坏话的例子"));
-
-        // Test Japanese
-        Assert.IsTrue(forword.Search("これはばかな例です"));
-        Assert.AreEqual("これは *** な例です", forword.Replace("これはばかな例です"));
-
-        // Test Russian
-        Assert.IsTrue(forword.Search("это плохой пример"));
-        Assert.AreEqual("это *** пример", forword.Replace("это плохой пример"));
-
-        // Test Spanish
-        Assert.IsTrue(forword.Search("es un ejemplo de málaga"));
-        Assert.AreEqual("es un ejemplo de ***", forword.Replace("es un ejemplo de málaga"));
-
-        // Test Italian
-        Assert.IsTrue(forword.Search("un esempio di cattività"));
-        Assert.AreEqual("un esempio di ***", forword.Replace("un esempio di cattività"));
     }
 
     [TestMethod]

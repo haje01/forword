@@ -17,6 +17,13 @@ namespace ForwordLib
             public bool IsRoot { get; set; }
         }
 
+        private static bool IsThaiDiacritic(char ch)
+        {
+            int code = (int)ch;
+            return (0x0E30 <= code && code <= 0x0E3A) ||  // Thai vowel marks
+                   (0x0E47 <= code && code <= 0x0E4E);     // Thai tone marks
+        }
+
         // 기본적으로 무시할 기호들
         private static readonly HashSet<char> DefaultIgnoredSymbols = new HashSet<char>
         {
@@ -41,26 +48,20 @@ namespace ForwordLib
                 // Map accented characters
                 switch (ch)
                 {
-                    case 'à':
-                    case 'á':
-                    case 'ä':
-                    case 'â': ch = 'a'; break;
-                    case 'è':
-                    case 'é':
-                    case 'ë':
-                    case 'ê': ch = 'e'; break;
-                    case 'ì':
-                    case 'í':
-                    case 'ï':
-                    case 'î': ch = 'i'; break;
-                    case 'ò':
-                    case 'ó':
-                    case 'ö':
-                    case 'ô': ch = 'o'; break;
-                    case 'ù':
-                    case 'ú':
-                    case 'ü':
-                    case 'û': ch = 'u'; break;
+                    // Unified accent mapping for all languages
+                    // a with accents (French, Portuguese, German)
+                    case 'à': case 'á': case 'â': case 'ã': case 'ä': ch = 'a'; break;
+                    // e with accents (French, Portuguese)
+                    case 'è': case 'é': case 'ê': case 'ë': ch = 'e'; break;
+                    // i with accents (French, Portuguese)
+                    case 'ì': case 'í': case 'î': case 'ï': ch = 'i'; break;
+                    // o with accents (French, Portuguese)
+                    case 'ò': case 'ó': case 'ô': case 'õ': case 'ö': ch = 'o'; break;
+                    // u with accents (French, Portuguese, German)
+                    case 'ù': case 'ú': case 'û': case 'ü': ch = 'u'; break;
+                    // Other special characters
+                    case 'ÿ': ch = 'y'; break;  // French
+                    case 'ç': ch = 'c'; break;  // French, Portuguese
                     case 'ñ': ch = 'n'; break;
                     case 'ß':
                         normalized.Append("ss");
@@ -91,26 +92,20 @@ namespace ForwordLib
                 // Map accented characters
                 switch (ch)
                 {
-                    case 'à':
-                    case 'á':
-                    case 'ä':
-                    case 'â': ch = 'a'; break;
-                    case 'è':
-                    case 'é':
-                    case 'ë':
-                    case 'ê': ch = 'e'; break;
-                    case 'ì':
-                    case 'í':
-                    case 'ï':
-                    case 'î': ch = 'i'; break;
-                    case 'ò':
-                    case 'ó':
-                    case 'ö':
-                    case 'ô': ch = 'o'; break;
-                    case 'ù':
-                    case 'ú':
-                    case 'ü':
-                    case 'û': ch = 'u'; break;
+                    // Unified accent mapping for all languages
+                    // a with accents (French, Portuguese, German)
+                    case 'à': case 'á': case 'â': case 'ã': case 'ä': ch = 'a'; break;
+                    // e with accents (French, Portuguese)
+                    case 'è': case 'é': case 'ê': case 'ë': ch = 'e'; break;
+                    // i with accents (French, Portuguese)
+                    case 'ì': case 'í': case 'î': case 'ï': ch = 'i'; break;
+                    // o with accents (French, Portuguese)
+                    case 'ò': case 'ó': case 'ô': case 'õ': case 'ö': ch = 'o'; break;
+                    // u with accents (French, Portuguese, German)
+                    case 'ù': case 'ú': case 'û': case 'ü': ch = 'u'; break;
+                    // Other special characters
+                    case 'ÿ': ch = 'y'; break;  // French
+                    case 'ç': ch = 'c'; break;  // French, Portuguese
                     case 'ñ': ch = 'n'; break;
                     case 'ß':
                         normalized.Append("ss");
@@ -373,10 +368,16 @@ namespace ForwordLib
                 .Select(g => g.OrderByDescending(m => m.end).First())
                 .ToList();
 
-            // Replace matches from end to start
+            // Replace matches from end to start in the filtered list.
             foreach (var match in filteredMatches.OrderByDescending(m => m.start))
             {
                 var (start, end) = match;
+                // Extend boundary to include adjacent Thai diacritic marks
+                while (end < text.Length && IsThaiDiacritic(text[end]))
+                {
+                    end++;
+                }
+
                 var prefix = result.Substring(0, start);
                 var suffix = end < result.Length ? result.Substring(end).TrimStart() : "";
                 
@@ -386,18 +387,15 @@ namespace ForwordLib
                     var lastChar = prefix[prefix.Length - 1];
                     prefix = prefix.TrimEnd();
                     
-                    // 접두사가 CJK 문자로 끝나거나 공백으로 끝났던 경우 공백 추가
-                    if (char.GetUnicodeCategory(lastChar) == System.Globalization.UnicodeCategory.OtherLetter ||
-                        char.IsWhiteSpace(lastChar))
+                    // 접두사가 비어있지 않으면 공백 추가
+                    if (!string.IsNullOrEmpty(prefix))
                     {
                         prefix = prefix + " ";
                     }
                 }
                 
-                // 접미사가 있고 한글/CJK 문자로 시작하면 공백 추가
-                if (!string.IsNullOrEmpty(suffix) && 
-                    (char.GetUnicodeCategory(suffix[0]) == System.Globalization.UnicodeCategory.OtherLetter ||
-                     (suffix[0] >= '\u0400' && suffix[0] <= '\u04FF')))  // Cyrillic range
+                // 접미사가 비어있지 않으면 공백 추가
+                if (!string.IsNullOrEmpty(suffix))
                 {
                     suffix = " " + suffix;
                 }

@@ -42,7 +42,15 @@ class Forword:
             elif c in 'ìíïî': c = 'i'
             elif c in 'òóöô': c = 'o'
             elif c in 'ùúüû': c = 'u'
+            # French
+            elif c == 'ÿ': c = 'y'
+            elif c == 'ç': c = 'c'
+            # Portuguese
+            elif c == 'ã': c = 'a'
+            elif c == 'õ': c = 'o'
+            # Spanish
             elif c == 'ñ': c = 'n'
+            # German
             elif c == 'ß': 
                 normalized += 'ss'
                 continue
@@ -50,8 +58,38 @@ class Forword:
             elif 0x0300 <= code <= 0x036F:
                 continue
             
-            # Only keep alphanumeric characters
+            # Keep word characters from all supported languages
+            # Basic Latin letters and numbers
             if c.isalnum():
+                normalized += c
+                continue
+            
+            # Thai characters
+            if 0x0E00 <= code <= 0x0E7F:  # Thai
+                # Skip Thai vowel and tone marks
+                if not (0x0E30 <= code <= 0x0E3A or 0x0E47 <= code <= 0x0E4E):
+                    normalized += c
+                continue
+            
+            # CJK characters
+            if 0x4E00 <= code <= 0x9FFF:  # CJK Unified Ideographs
+                normalized += c
+                continue
+            
+            # Japanese characters
+            if 0x3040 <= code <= 0x309F or 0x30A0 <= code <= 0x30FF:  # Hiragana & Katakana
+                normalized += c
+                continue
+            
+            # Korean characters
+            if (0xAC00 <= code <= 0xD7AF or  # Syllables
+                0x1100 <= code <= 0x11FF or  # Jamo
+                0x3130 <= code <= 0x318F):   # Compatibility Jamo
+                normalized += c
+                continue
+            
+            # Russian characters
+            if 0x0400 <= code <= 0x04FF:  # Cyrillic
                 normalized += c
         
         return normalized
@@ -160,7 +198,22 @@ class Forword:
         if 0x0100 <= code <= 0x017F:  # Latin Extended-A
             return True
             
+        # Thai characters
+        if 0x0E00 <= code <= 0x0E7F:  # Thai
+            # 태국어 모음과 성조 기호를 제외한 기본 문자만 단어 문자로 처리
+            # 0x0E30-0x0E3A: 모음 기호
+            # 0x0E47-0x0E4E: 성조 기호
+            if not (0x0E30 <= code <= 0x0E3A or 0x0E47 <= code <= 0x0E4E):
+                return True
+            return False
+            
         return False
+
+    @staticmethod
+    def _is_thai_diacritic(ch: str) -> bool:
+        """Check if a Thai character is a diacritic (vowel mark or tone mark)."""
+        code = ord(ch)
+        return (0x0E30 <= code <= 0x0E3A) or (0x0E47 <= code <= 0x0E4E)
 
     def _normalize_text(self, text: str) -> str:
         """Normalize text by converting to lowercase and removing accents."""
@@ -171,22 +224,37 @@ class Forword:
                 c = c.lower()
             
             # Map accented characters
+            code = ord(c)
             if c in 'àáäâ': c = 'a'
             elif c in 'èéëê': c = 'e'
             elif c in 'ìíïî': c = 'i'
             elif c in 'òóöô': c = 'o'
             elif c in 'ùúüû': c = 'u'
+            # French
+            elif c == 'ÿ': c = 'y'
+            elif c == 'ç': c = 'c'
+            # Portuguese
+            elif c == 'ã': c = 'a'
+            elif c == 'õ': c = 'o'
+            # Spanish
             elif c == 'ñ': c = 'n'
+            # German
             elif c == 'ß': 
                 normalized += 'ss'
                 continue
             # Skip combining diacritical marks
-            elif 0x0300 <= ord(c) <= 0x036F:
+            elif 0x0300 <= code <= 0x036F:
                 continue
             
-            # Only keep word characters
-            if c not in self.ignored_symbols and self._is_word_char(c):
-                normalized += c
+            # 만약 사용자 정의 무시 기호(ignored_symbols)가 기본값과 동일하다면,
+            # 기존처럼 단어 문자(IsWordChar)만 남김.
+            # 그렇지 않으면, 전달된 ignoredSymbols에 있는 문자만 제거하고 그대로 유지.
+            if self.ignored_symbols == self.DEFAULT_IGNORED_SYMBOLS:
+                if c not in self.ignored_symbols and self._is_word_char(c):
+                    normalized += c
+            else:
+                if c not in self.ignored_symbols:
+                    normalized += c
         
         return normalized
 
@@ -311,6 +379,10 @@ class Forword:
 
         # Replace matches from end to start in the filtered list.
         for start, end in sorted(filtered, reverse=True):
+            # Extend boundary to include adjacent Thai diacritic marks
+            while end < len(text) and self._is_thai_diacritic(text[end]):
+                end += 1
+
             prefix = result[:start]
             suffix = result[end:]
             

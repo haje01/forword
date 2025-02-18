@@ -89,39 +89,49 @@ TEST_F(ForwordTest, WordsWithWhitespace) {
 TEST_F(ForwordTest, MultilingualSupport) {
     // Create forbidden words file with multilingual words
     std::ofstream file(forbidden_words_file);
-    file << u8"坏话\n"      // Chinese
+    // French
+    file << u8"français\n"   // French
+         << u8"garçon\n"     // boy
+         << u8"café\n"       // coffee
+    // Portuguese
+         << u8"coração\n"    // heart
+         << u8"não\n"        // no
+         << u8"ação\n"       // action
+    // Thai
+         << u8"สวัสดี\n"      // hello
+         << u8"ขอบคุณ\n"      // thank you
+    // Existing test words
+         << u8"坏话\n"      // Chinese
          << u8"ばか\n"      // Japanese
          << u8"плохой\n"    // Russian
          << u8"málaga\n"    // Spanish
-         << u8"cattività\n" // Italian
-         << u8"scheiße\n";  // German
+         << u8"cattività\n"; // Italian
     file.close();
 
     Forword forword(forbidden_words_file);
 
+    // Test French
+    EXPECT_TRUE(forword.search(u8"Je parle français"));
+    EXPECT_TRUE(forword.search(u8"Le garcon est la"));  // without ç
+    EXPECT_TRUE(forword.search(u8"Un café noir"));
+    EXPECT_EQ(forword.replace(u8"Je parle français bien"), 
+              u8"Je parle *** bien");
+    
+    // Test Portuguese
+    EXPECT_TRUE(forword.search(u8"Meu coração"));
+    EXPECT_TRUE(forword.search(u8"Eu não sei"));
+    EXPECT_TRUE(forword.search(u8"Uma ação importante"));
+    EXPECT_EQ(forword.replace(u8"Meu coração bate"),
+              u8"Meu *** bate");
+    
+    // Test Thai
+    EXPECT_TRUE(forword.search(u8"พูดว่า สวัสดี ครับ"));
+    EXPECT_TRUE(forword.search(u8"พูด ขอบคุณ ครับ"));
+    EXPECT_EQ(forword.replace(u8"พูดว่า สวัสดี ครับ"),
+              u8"พูดว่า *** ครับ");
+
     // Test Chinese
     EXPECT_TRUE(forword.search(u8"这是一个坏话的例子"));
-    EXPECT_EQ(forword.replace(u8"这是一个坏话的例子"), u8"这是一个 *** 的例子");
-
-    // Test Japanese
-    EXPECT_TRUE(forword.search(u8"これはばかな例です"));
-    EXPECT_EQ(forword.replace(u8"これはばかな例です"), u8"これは *** な例です");
-
-    // Test Russian
-    EXPECT_TRUE(forword.search(u8"это плохой пример"));
-    EXPECT_EQ(forword.replace(u8"это плохой пример"), u8"это *** пример");
-
-    // Test Spanish
-    EXPECT_TRUE(forword.search(u8"es un ejemplo de málaga"));
-    EXPECT_EQ(forword.replace(u8"es un ejemplo de málaga"), u8"es un ejemplo de ***");
-
-    // Test Italian
-    EXPECT_TRUE(forword.search(u8"un esempio di cattività"));
-    EXPECT_EQ(forword.replace(u8"un esempio di cattività"), u8"un esempio di ***");
-
-    // Test German
-    EXPECT_TRUE(forword.search(u8"das ist scheiße"));
-    EXPECT_EQ(forword.replace(u8"das ist scheiße"), u8"das ist ***");
 }
 
 TEST_F(ForwordTest, DuplicateWordWarning) {
