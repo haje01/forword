@@ -221,7 +221,7 @@ int main(){
 - 빈번하게 호출하는 경우 Forword 객체를 처음 한 번만 초기화하고, 재사용하는 
 것을 권장합니다.
 
-## Forword Developers
+## Forword 개발자
 
 ### Prerequisites
 각 언어별 테스트를 실행하기 위해 필요한 도구:
